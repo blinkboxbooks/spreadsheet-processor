@@ -1,0 +1,87 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ONIXmessage>
+  <Header>
+    <MessageNote>Generated from `example_spreadsheet.xlsx` by Marvin for blinkbox books</MessageNote>
+  </Header>
+  <Product>
+    <ProductIdentifier>
+      <ProductIDType>15</ProductIDType>
+      <IDValue>9780111222333</IDValue>
+    </ProductIdentifier>
+    <Title>
+      <TitleType>01</TitleType>
+      <TitleText textcase="02">The Title of the Book</TitleText>
+      <Subtitle textcase="02">Subtitle of book</Subtitle>
+    </Title>
+    <OtherText>
+      <TextTypeCode>01</TextTypeCode>
+      <TextFormat>05</TextFormat>
+      <Text>A description <em>with HTML</em></Text>
+    </OtherText>
+    <Contributor>
+      <SequenceNumber>1</SequenceNumber>
+      <ContributorRole>A01</ContributorRole>
+      <PersonName>Iain Macintosh</PersonName>
+      <PersonNameInverted>Macintosh, Iain</PersonNameInverted>
+      <BiographicalNote textformat="06">Bio for contributor 1</BiographicalNote>
+    </Contributor>
+    <MediaFile>
+      <MediaFileTypeCode>04</MediaFileTypeCode>
+      <MediaFileFormatCode>03</MediaFileFormatCode>
+      <MediaFileLinkTypeCode>01</MediaFileLinkTypeCode>
+      <MediaFileLink>http://path.to/image.jpg</MediaFileLink>
+      <DownloadCaption>Iain Macintosh</DownloadCaption>
+    </MediaFile>
+    <Contributor>
+      <SequenceNumber>2</SequenceNumber>
+      <ContributorRole>A01</ContributorRole>
+      <PersonName>Kenny Millar</PersonName>
+      <PersonNameInverted>Millar, Kenny</PersonNameInverted>
+      <BiographicalNote textformat="06">Bio for contributor 2</BiographicalNote>
+    </Contributor>
+    <Contributor>
+      <SequenceNumber>3</SequenceNumber>
+      <ContributorRole>A12</ContributorRole>
+      <PersonName>Neil White</PersonName>
+      <PersonNameInverted>White, Neil</PersonNameInverted>
+    </Contributor>
+    <SupplyDetail>
+      <Price>
+        <PriceTypeCode>01</PriceTypeCode>
+        <PriceAmount>6.66</PriceAmount>
+        <CurrencyCode>GBP</CurrencyCode>
+      </Price>
+      <Price>
+        <PriceTypeCode>02</PriceTypeCode>
+        <PriceAmount>7.99</PriceAmount>
+        <CurrencyCode>GBP</CurrencyCode>
+      </Price>
+    </SupplyDetail>
+    <PublicationDate>20120810</PublicationDate>
+    <Imprint>
+      <ImprintName>Imprint name</ImprintName>
+    </Imprint>
+    <Publisher>
+      <PublishingRole>01</PublishingRole>
+      <PublisherName>Publisher name</PublisherName>
+    </Publisher>
+    <SalesRights>
+      <SalesRightsType>01</SalesRightsType>
+      <RightsCountry>GB IE</RightsCountry>
+    </SalesRights>
+    <Language>
+      <LanguageRole>01</LanguageRole>
+      <LanguageCode>eng</LanguageCode>
+    </Language>
+    <Extent>
+      <ExtentType>00</ExtentType>
+      <ExtentValue>224</ExtentValue>
+      <ExtentUnit>03</ExtentUnit>
+    </Extent>
+    <BASICMainSubject>SPO015000</BASICMainSubject>
+    <Subject>
+      <SubjectSchemeIdentifier>10</SubjectSchemeIdentifier>
+      <SubjectCode>FIC005000</SubjectCode>
+    </Subject>
+  </Product>
+</ONIXmessage>

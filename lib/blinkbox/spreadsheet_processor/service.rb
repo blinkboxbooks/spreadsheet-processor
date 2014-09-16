@@ -1,0 +1,115 @@
+require "blinkbox/common_messaging"
+require "blinkbox/common_logging"
+require "blinkbox/mappings"
+
+module Blinkbox
+  module SpreadsheetProcessor
+    class Service
+      attr_reader :logger
+
+      def initialize(options)
+        @logger = CommonLogging.from_config(options.tree(:logging))
+        @logger.facility_version = VERSION
+        service_name = options[:'logging.gelf.facility']
+
+        CommonMessaging.configure(options.tree(:rabbitmq), @logger)
+
+        file_found_content_types = [
+          "application/vnd.ms-excel",
+          "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        ]
+
+        bindings = file_found_content_types.map do |content_type|
+          {
+            "content-type" => "application/vnd.blinkbox.books.ingestion.file.found.v2+json",
+            "referenced-content-type" => content_type,
+            "x-match" => "all"
+          }
+        end
+
+        @queue = CommonMessaging::Queue.new(
+          "#{service_name}.pending_assets",
+          exchange: "Marvin",
+          bindings: bindings
+        )
+
+        @exchange = CommonMessaging::Exchange.new(
+          "Marvin",
+          facility: service_name,
+          facility_version: VERSION
+        )
+
+        @mapper = Mappings.new(
+          options[:'mapper.url'],
+          service_name: service_name
+        )
+        @logger.debug "Spreadsheet Processor v#{VERSION} initialized"
+      end
+
+      def start
+        @queue.subscribe do |metadata, obj|
+          case obj.class
+          when CommonMessaging::IngestionFileFoundV2
+            process_spreadsheet(metadata, obj)
+            :ack
+          else
+            @logger.error "Unexpected message in the queue (#{obj.content_type}; id: #{metadata[:message_id]}). Sent to DLQ."
+            :reject
+          end
+        end
+      end
+
+      def join
+
+      end
+
+      def stop
+
+      end
+
+      private
+
+      def process_spreadsheet(metadata, obj)
+        downloaded_file_io = @mapper.open(obj['source']['uri'])
+        begin
+          reader = Reader.new(downloaded_file_io)
+          source = obj['source'].merge(
+            'system' => {
+              name: @service_name.tr('.','/'),
+              version: VERSION
+            }
+          )
+          issues = reader.each_book do |book|
+            book['classification'] = [
+              {
+                realm: "isbn",
+                id: book.delete(:isbn)
+              },
+              {
+                realm: "source_username",
+                id: obj['source']['username']
+              }
+            ]
+            book[:source] = source
+            book_obj = IngestionBookMetadataV2.new(book)
+
+            @exhange.publish(book_obj)
+          end
+
+          if issues.any?
+            rej_obj = IngestionFileRejectedV2.new(
+              # TODO: Format of rejection reasons
+              rejectionReasons: issues,
+              source: source
+            )
+
+            @exhange.publish(rej_obj)
+          end
+        ensure
+          downloaded_file_io.close
+          downloaded_file_io.unlink
+        end
+      end
+    end
+  end
+end

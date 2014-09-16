@@ -1,0 +1,1 @@
+service: bundle exec ruby bin/blinkbox-spreadsheet_processor
