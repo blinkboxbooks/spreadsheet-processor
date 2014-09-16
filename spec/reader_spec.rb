@@ -95,7 +95,7 @@ context Blinkbox::SpreadsheetProcessor::Reader do
         })
 
         book, issues = described_class.send(:validate_spreadsheet_row_hash, row, 0)
-        expect(issues.size).to eq(1)
+        expect(issues.size).to eq(1), "An incorrect number of issues was received (#{issues.map{ |i| i[:message] }.join(", ")}"
         expect(issues.first[:error_code]).to eq("isbn.invalid")
         expect(book[:isbn]).to be_nil
       end
@@ -116,8 +116,7 @@ context Blinkbox::SpreadsheetProcessor::Reader do
         row = valid_row(with: { 'Title' => title })
 
         book, issues = described_class.send(:validate_spreadsheet_row_hash, row, 0)
-        expect(issues.size).to eq(1)
-        expect(issues.first[:error_code]).to eq("title.invalid")
+        expect(issues.map { |i| i[:error_code] }).to include("title.invalid")
         expect(book[:title]).to be_nil
       end
     end
@@ -158,8 +157,7 @@ context Blinkbox::SpreadsheetProcessor::Reader do
           row = valid_row(with: { 'Language' => language })
 
           book, issues = described_class.send(:validate_spreadsheet_row_hash, row, 0)
-          expect(issues.size).to eq(1)
-          expect(issues.first[:error_code]).to eq("language.invalid")
+          expect(issues.map { |i| i[:error_code] }).to include("language.invalid")
           expect(book[:language]).to be_nil
         end
       end
@@ -182,8 +180,7 @@ context Blinkbox::SpreadsheetProcessor::Reader do
           row = valid_row(with: { 'Publication date' => date })
 
           book, issues = described_class.send(:validate_spreadsheet_row_hash, row, 0)
-          expect(issues.size).to eq(1)
-          expect(issues.first[:error_code]).to eq("publish_date.invalid")
+          expect(issues.map { |i| i[:error_code] }).to include("publish_date.invalid")
           expect((book[:dates] || {})[:publish]).to_not be_a(Date)
         end
       end
@@ -205,8 +202,7 @@ context Blinkbox::SpreadsheetProcessor::Reader do
           row = valid_row(with: { "Contributor #{contributor_n}" => "" })
 
           book, issues = described_class.send(:validate_spreadsheet_row_hash, row, 0)
-          expect(issues.size).to eq(1)
-          expect(issues.first[:error_code]).to eq("contributor.invalid")
+          expect(issues.map { |i| i[:error_code] }).to include("contributor.invalid")
         end
 
         it "must accept a non-empty string as an inverted name" do
@@ -248,8 +244,7 @@ context Blinkbox::SpreadsheetProcessor::Reader do
           row = valid_row(with: { "Contributor #{contributor_n} Role" => "Lord of Writing" })
 
           book, issues = described_class.send(:validate_spreadsheet_row_hash, row, 0)
-          expect(issues.size).to eq(1)
-          expect(issues.first[:error_code]).to eq("contributor.invalid")
+          expect(issues.map { |i| i[:error_code] }).to include("contributor.invalid")
         end
 
         it "must accept a non-empty contributor biography" do
@@ -299,8 +294,7 @@ context Blinkbox::SpreadsheetProcessor::Reader do
           row = valid_row(with: { "Contributor #{contributor_n} Photo URL" => "just a string" })
 
           book, issues = described_class.send(:validate_spreadsheet_row_hash, row, 0)
-          expect(issues.size).to eq(1)
-          expect(issues.first[:error_code]).to eq("contributor.invalid")
+          expect(issues.map { |i| i[:error_code] }).to include("contributor.invalid")
         end
       end
     end
@@ -326,16 +320,14 @@ context Blinkbox::SpreadsheetProcessor::Reader do
         row = valid_row(with: extra)
 
         book, issues = described_class.send(:validate_spreadsheet_row_hash, row, 0)
-        expect(issues.size).to eq(1)
-        expect(issues.first[:error_code]).to eq("contributors.invalid")
+        expect(issues.map { |i| i[:error_code] }).to include("contributor.missing")
       end
 
       it "must reject rows with Contributor 2 and 3 data, but no Contributor 1 data" do
         row = valid_row(with: empty_contributor(1))
 
         book, issues = described_class.send(:validate_spreadsheet_row_hash, row, 0)
-        expect(issues.size).to eq(1)
-        expect(issues.first[:error_code]).to eq("contributors.invalid")
+        expect(issues.map { |i| i[:error_code] }).to include("contributor.missing")
       end
 
       it "must reject rows with Contributor 3 data, but no Contributor 1 or 2 data" do
@@ -343,10 +335,119 @@ context Blinkbox::SpreadsheetProcessor::Reader do
         row = valid_row(with: extra)
 
         book, issues = described_class.send(:validate_spreadsheet_row_hash, row, 0)
-        expect(issues.size).to eq(1)
-        expect(issues.first[:error_code]).to eq("contributors.invalid")
+        expect(issues.map { |i| i[:error_code] }).to include("contributor.missing")
+      end
+    end
+
+    describe "for prices" do
+      ["2.00", 2.00, 2].each do |amt|
+        it "must accept numbers as ex VAT price: (#{amt.class}) #{amt.inspect}" do
+          row = valid_row(with: { 'List Price ex VAT' => amt })
+
+          book, issues = described_class.send(:validate_spreadsheet_row_hash, row, 0)
+          expect(issues.size).to eq(0)
+          ex_vat_prices = book[:prices].select { |p| !p["includesTax?"] }
+          expect(ex_vat_prices.size).to eq(1)
+          expect(ex_vat_prices[:amount]).to eq(amt.to_f)
+        end
       end
 
+      ["", nil, "two"].each do |amt|
+        it "must reject a row with non-numbers in the ex VAT price column: (#{amt.class}) #{amt.inspect}" do
+          row = valid_row(with: { 'List Price ex VAT' => amt })
+
+          book, issues = described_class.send(:validate_spreadsheet_row_hash, row, 0)
+          expect(issues.map { |i| i[:error_code] }).to include("ex_vat_price.invalid")
+          ex_vat_prices = book[:prices].select { |p| !p["includesTax?"] }         
+          expect(ex_vat_prices.size).to eq(0)
+        end
+      end
+
+      ["2.00", 2.00, 2].each do |amt|
+        it "must accept numbers as inc VAT price: (#{amt.class}) #{amt.inspect}" do
+          row = valid_row(with: { 'List Price inc VAT' => amt })
+
+          book, issues = described_class.send(:validate_spreadsheet_row_hash, row, 0)
+          expect(issues.size).to eq(0)
+          inc_vat_prices = book[:prices].select { |p| p["includesTax?"] }
+          expect(inc_vat_prices.size).to eq(1)
+          expect(inc_vat_prices[:amount]).to eq(amt.to_f)
+        end
+      end
+
+      ["", nil, "two"].each do |amt|
+        it "must reject a row with non-numbers in the inc VAT price column: (#{amt.class}) #{amt.inspect}" do
+          row = valid_row(with: { 'List Price inc VAT' => amt })
+
+          book, issues = described_class.send(:validate_spreadsheet_row_hash, row, 0)
+          expect(issues.map { |i| i[:error_code] }).to include("inc_vat_price.invalid")
+          inc_vat_prices = book[:prices].select { |p| p["includesTax?"] }         
+          expect(inc_vat_prices.size).to eq(0)
+        end
+      end
+
+      ["GBP", "gbp", "USD", "EUR"].each do |code|
+        it "must accept three letter currency codes: #{code}" do
+          row = valid_row(with: { 'Currency Type' => code })
+
+          book, issues = described_class.send(:validate_spreadsheet_row_hash, row, 0)
+          expect(issues.size).to eq(0)
+          prices_with_correct_currency_codes = book[:prices].select { |p| p["currency"] == code.upcase }
+          expect(prices_with_correct_currency_codes.size).to eq(2)
+        end
+      end
+
+      ["", nil, "en"].each do |code|
+        it "must reject a row with invalid currencies: (#{code.class}) #{code.inspect}" do
+          row = valid_row(with: { 'Currency Type' => code })
+
+          book, issues = described_class.send(:validate_spreadsheet_row_hash, row, 0)
+          expect(issues.map { |i| i[:error_code] }).to include("currency.invalid")
+          expect(book[:prices].size).to eq(0)
+        end
+      end
+    end
+
+    describe "for page counts" do
+      ["143", 143].each do |count|
+        it "must accept page counts: #{count}" do
+          row = valid_row(with: { 'Page Count' => count })
+
+          book, issues = described_class.send(:validate_spreadsheet_row_hash, row, 0)
+          expect(issues.size).to eq(0)
+          expect(book[:pages]).to eq(count.to_i])
+        end
+      end
+
+      ["four hundred", "", nil, 341.12].each do |count|
+        it "must reject a row with non-integer page counts" do
+          row = valid_row(with: { 'Page Count' => count})
+
+          book, issues = described_class.send(:validate_spreadsheet_row_hash, row, 0)
+          expect(issues.map { |i| i[:error_code] }).to include("page_count.invalid")
+          expect(book[:pages]).to be_nil
+        end
+      end
+    end
+
+    describe "for publishers" do
+      it "must accept publisher names" do
+        publisher = "Awesome Publishing"
+        row = valid_row(with: { 'Publisher' => publisher })
+
+        book, issues = described_class.send(:validate_spreadsheet_row_hash, row, 0)
+        expect(issues.size).to eq(0)
+        expect(book[:publisher]).to eq(publisher)
+      end
+
+      it "must reject a row with an empty publisher name" do
+        publisher = ""
+        row = valid_row(with: { 'Publisher' => publisher })
+
+        book, issues = described_class.send(:validate_spreadsheet_row_hash, row, 0)
+        expect(issues.map { |i| i[:error_code] }).to include("publisher.invalid")
+        expect(book[:publisher]).to be_nil
+      end
     end
 
     describe "for issues" do
@@ -359,7 +460,7 @@ context Blinkbox::SpreadsheetProcessor::Reader do
           cell_reference = "#{Roo::Base.number_to_letter(column_num)}#{row_num}"
 
           book, issues = described_class.send(:validate_spreadsheet_row_hash, row, row_num)
-          expect(issues.size).to eq(1)
+          expect(issues.size).to be > 0, "An incorrect number of issues was received (#{issues.map{ |i| i[:message] }.join(", ")})"
 
           expect(issues.first[:data][:row]).to eq(row_num)
           expect(issues.first[:data][:column]).to eq(column_num)

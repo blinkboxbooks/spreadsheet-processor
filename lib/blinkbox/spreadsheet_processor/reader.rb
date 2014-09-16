@@ -198,35 +198,49 @@ module Blinkbox
           }]
         end
         # Process the row
-        book = {}
-        issues = CELL_VALIDATION.map { |field_name, details|
+        book = { contributors: [] }
+        issues = []
+
+        CELL_VALIDATION.each do |field_name, details|
           details = details.dup
           validation_result = details.delete(:valid).call(row[field_name])
-          if validation_result.is_a?(Hash)
+
+          if validation_result != {} && (field_name =~ /^Contributor (2|3)$/) && book[:contributors].size < (Regexp.last_match[1].to_i - 1)
+            details[:error_code] = "contributor.missing"
+            details[:message] = "A contributor was specified without all previous contributors."
+            details[:data] = cell_reference(field_name, row_number, row_headers).merge(
+              field_name: field_name
+            )
+            issues.push(details)
+          end
+
+          if validation_result.is_a?(Hash) 
             if validation_result[:contributor]
               # Contributors are a special case, as they need to merge into an array
               validation_result = {
-                contributors: (book[:contributors] ||= []).push(validation_result[:contributor])
+                contributors: book[:contributors] + [validation_result[:contributor]]
               }
             end
             book.merge!(validation_result)
 
-            nil
-          else
-            if validation_result.is_a?(Array)
-              details[:message] = validation_result[1]
-              # This is so we can reference the specific column which failed within the contributors
-              field_name = [field_name, validation_result[0]].compact.join(" ")
-            else
-              details[:message] = validation_result
-            end
-
-            details[:data] = cell_reference(field_name, row_number, row_headers).merge(
-              field_name: field_name
-            )
-            details  
+            # All good! No need to push an issue
+            next
           end
-        }.compact
+
+          # if the field didn't validate
+          if validation_result.is_a?(Array)
+            details[:message] = validation_result[1]
+            # This is so we can reference the specific column which failed within the contributors
+            field_name = [field_name, validation_result[0]].compact.join(" ")
+          else
+            details[:message] = validation_result
+          end
+
+          details[:data] = cell_reference(field_name, row_number, row_headers).merge(
+            field_name: field_name
+          )
+          issues.push(details)
+        end
 
         [book, issues]
       end
