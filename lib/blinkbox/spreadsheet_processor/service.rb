@@ -83,11 +83,11 @@ module Blinkbox
             book['classification'] = [
               {
                 realm: "isbn",
-                id: book.delete(:isbn)
+                id: book[:isbn]
               },
               {
                 realm: "source_username",
-                id: obj['source']['username']
+                id: source['username']
               }
             ]
             book[:source] = source

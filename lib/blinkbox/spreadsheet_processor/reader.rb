@@ -19,112 +19,176 @@ module Blinkbox
       }
       # A hash detailing the validation for each required heading
       CELL_VALIDATION = {
-        "eISBN 13" => {
-          error_code: "isbn.invalid",
-          valid: proc { |field|
-            if field.to_s =~ /^(?:9780|9781|979\d)\d{9}$/
-              { isbn: field.to_s }
-            else
-              "'eISBN 13' is not a valid ISBN"
-            end
+        "eISBN 13" => proc { |field|
+          if field.to_s =~ /^\d{13}$/
+            {
+              data: { "isbn" => field.to_s }
+            }
+          else
+            {
+              error_code: "isbn.invalid",
+              message: "'eISBN 13' is not a valid ISBN"
+            }
+          end
+        },
+        "Title" => proc { |field|
+          val = field.to_s
+          if val.empty?
+            {
+              error_code: "title.invalid",
+              message: "'Title' cannot be empty"
+            }
+          else
+            {
+              data: { "title" => val }
+            }
+          end
+        },
+        "Subtitle" => proc { |field|
+          val = field.to_s
+          if val.empty?
+            data = {}
+          else
+            data  ={ "subtitle" => val}
+          end
+          {
+            data: data
           }
         },
-        "Title" => {
-          error_code: "title.invalid",
-          valid: proc { |field|
-            val = field.to_s
-            if val.empty?
-              "'Title' cannot be empty"
-            else
-              { title: val }
-            end
-          }
-        },
-        "Subtitle" => {
-          # Subtitle is always valid
-          valid: proc { |field|
-            val = field.to_s
-            if val.empty?
-              {}
-            else
-              { subtitle: val}
-            end
-          }
-        },
-        "Contributor 1" => (contributor = {
-          error_code: "contributor.invalid",
-          valid: proc { |data|
-            present = data.select { |k, v| !v.to_s.empty? }.keys
-            next {} if present.empty?
+        "Contributor 1" => (contributor = proc { |data|
+          present = data.select { |k, v| !v.to_s.empty? }.keys
+          next { data: {} } if present.empty?
 
-            # Names
-            next [nil, "Contributor name must be present if any other fields are not empty (#{present.join(", ")})"] if !present.include?("Name")
-            # Deal with missing inverted names, which isn't a failing issue
-            if data["Inverted"].to_s.empty?
-              parts = data["Name"].split(" ")
-              first = parts.shift
-              data["Inverted"] = [parts.join(" "), first].join(", ")
-            end
-            doc = {
-              contributor: {
-                names: {
-                  display: data["Name"],
-                  sort: data["Inverted"]
-                }
+          # Names
+          next {
+            error_code: "contributor.invalid",
+            message: "Contributor name must be present if any other fields are not empty (#{present.join(", ")})"
+          } if !present.include?("Name")
+
+          # Deal with missing inverted names, which isn't a failing issue
+          if data["Inverted"].to_s.empty?
+            parts = data["Name"].split(" ")
+            first = parts.shift
+            data["Inverted"] = [parts.join(" "), first].join(", ")
+          end
+          doc = {
+            contributors: {
+              "names" => {
+                "display" => data["Name"],
+                "sort" => data["Inverted"]
               }
             }
+          }
 
-            # Role
-            next ["Role", "Contributor Role must is invalid"] if !CONTRIBUTOR_ROLES.has_key?(data["Role"].to_s.downcase)
-            doc[:contributor][:role] = CONTRIBUTOR_ROLES[data["Role"].to_s.downcase]
+          # Role
+          next {
+            error_code: "contributor.invalid",
+            field_suffix: "Role",
+            message: "Contributor Role must is invalid"
+          } if !CONTRIBUTOR_ROLES.has_key?(data["Role"].to_s.downcase)
 
-            # Biography
-            doc[:contributor][:biography] = data["Bio"] unless data["Bio"].to_s.empty? 
+          doc[:contributors]["role"] = CONTRIBUTOR_ROLES[data["Role"].to_s.downcase]
 
-            # Photo URL
-            if !data["Photo URL"].to_s.empty?
-              next ["Photo URL", "Contributor Photo URL must be a URL"] unless data["Photo URL"] =~ URI.regexp
-              doc[:contributor][:media] = {
-                images: [{
-                  classification: [{
-                    realm: "type",
-                    id: "profile"
-                  }],
-                  uris: [{
-                    type: "remote",
-                    uri: data["Photo URL"]
-                  }]
+          # Biography
+          doc[:contributors]["biography"] = data["Bio"] unless data["Bio"].to_s.empty? 
+
+          # Photo URL
+          if !data["Photo URL"].to_s.empty?
+            next {
+              error_code: "contributor.invalid",
+              field_suffix: "Photo URL",
+              message: "Contributor Photo URL must be a URL"
+            } unless data["Photo URL"] =~ URI.regexp
+
+            doc[:contributors]["media"] = {
+              "images" => [{
+                "classification" => [{
+                  "realm" => "type",
+                  "id" => "profile"
+                }],
+                "uris" => [{
+                  "type" => "remote",
+                  "uri" => data["Photo URL"]
                 }]
-              }
-            end
+              }]
+            }
+          end
 
-            doc
+          {
+            data: doc
           }
         }),
         "Contributor 2" => contributor.dup,
         "Contributor 3" => contributor.dup,
-        "Publication date" => {
-          error_code: "publish_date.invalid",
-          valid: proc { |field|
-            if !field.respond_to?(:strftime)
-              if field.to_s =~ /^(?<year>(?:16|17|18|19|20)\d\d)-?(?<month>\d\d)-?(?<day>\d\d)$/
-                parts = Regexp.last_match
-                field = Date.new(parts[:year].to_i, parts[:month].to_i, parts[:day].to_i)
-              else
-                next "'Publication date' must be a date in the format YYYYMMDD"
-              end
+        "Publication date" => proc { |field|
+          if !field.respond_to?(:strftime)
+            if field.to_s =~ /^(?<year>(?:16|17|18|19|20)\d\d)-?(?<month>\d\d)-?(?<day>\d\d)$/
+              parts = Regexp.last_match
+              field = Date.new(parts[:year].to_i, parts[:month].to_i, parts[:day].to_i)
+            else
+              next {
+                error_code: "publish_date.invalid",
+                message: "'Publication date' must be a date in the format YYYYMMDD"
+              }
             end
-            { dates: { publish: field } }
+          end
+          {
+            data: {
+              "dates" => {
+                "publish" => field
+              }
+            }
           }
         },
-        "Language" => {
-          error_code: "language.invalid",
-          valid: proc { |field|
-            if field =~ /^[a-z]{3}$/i
-              { language: [field.downcase] }
-            else
-              "'Language' must be a three letter word."
-            end
+        "Language" => proc { |field|
+          if field =~ /^[a-z]{3}$/i
+            {
+              data: { "language" => [field.downcase] }
+            }
+          else
+            {
+              error_code: "language.invalid",
+              message: "'Language' must be a three letter word."
+            }
+          end
+        },
+        "List Price ex VAT" => proc { |field|
+          next {
+            error_code: "ex_vat_price.invalid",
+            message: "ex VAT price must be a number."
+          } unless field.to_s =~ /^\d+(?:\.\d+)?$/
+          {
+            data: {
+              prices: {
+                "amount" => field.to_f,
+                "includesTax?" => false
+              }
+            }
+          }
+        },
+        "List Price inc VAT" => proc { |field|
+          next {
+            error_code: "inc_vat_price.invalid",
+            message: "inc VAT price must be a number."
+          } unless field.to_s =~ /^\d+(?:\.\d+)?$/
+          {
+            data: {
+              prices: {
+                "amount" => field.to_f,
+                "includesTax?" => true
+              }
+            }
+          }
+        },
+        "Currency Type" => proc { |field|
+          next {
+            error_code: "currency.invalid",
+            message: "Currency must be a three letter currency code."
+          } unless field.to_s =~ /^[A-Z]{3}$/i
+          {
+            data: {
+              "x-currency" => field.upcase
+            }
           }
         }
       }
@@ -198,48 +262,56 @@ module Blinkbox
           }]
         end
         # Process the row
-        book = { contributors: [] }
+        book = {}
         issues = []
+        contributor_columns_used = []
 
-        CELL_VALIDATION.each do |field_name, details|
-          details = details.dup
-          validation_result = details.delete(:valid).call(row[field_name])
+        CELL_VALIDATION.each do |field_name, validator|
+          validation_result = validator.call(row[field_name])
 
-          if validation_result != {} && (field_name =~ /^Contributor (2|3)$/) && book[:contributors].size < (Regexp.last_match[1].to_i - 1)
-            details[:error_code] = "contributor.missing"
-            details[:message] = "A contributor was specified without all previous contributors."
-            details[:data] = cell_reference(field_name, row_number, row_headers).merge(
-              field_name: field_name
-            )
-            issues.push(details)
-          end
+          contributor_columns_used.push(Regexp.last_match[1].to_i) if field_name =~ /^Contributor (\d)$/ && validation_result[:data] != {}
 
-          if validation_result.is_a?(Hash) 
-            if validation_result[:contributor]
-              # Contributors are a special case, as they need to merge into an array
-              validation_result = {
-                contributors: book[:contributors] + [validation_result[:contributor]]
-              }
+          if !validation_result[:error_code]
+            data = validation_result[:data]
+            data.keys.each do |key|
+              next unless key.is_a?(Symbol)
+              # Symbol keys should be treated like arrays and merged
+              data[key.to_s] = (book[key.to_s] || []) + [data[key]]
+              data.delete(key)
             end
-            book.merge!(validation_result)
+            book.merge!(data)
 
             # All good! No need to push an issue
             next
           end
 
-          # if the field didn't validate
-          if validation_result.is_a?(Array)
-            details[:message] = validation_result[1]
-            # This is so we can reference the specific column which failed within the contributors
-            field_name = [field_name, validation_result[0]].compact.join(" ")
-          else
-            details[:message] = validation_result
-          end
+          # This is so we can reference the specific column which failed within the contributors
+          field_name = [field_name, validation_result[:field_suffix]].compact.join(" ") if validation_result[:field_suffix]
 
-          details[:data] = cell_reference(field_name, row_number, row_headers).merge(
-            field_name: field_name
+          validation_result[:data] = cell_reference(field_name, row_number, row_headers).merge(
+            field_name: field_name,
+            value: row[field_name],
+            value_type: row[field_name].class
           )
-          issues.push(details)
+          issues.push(validation_result)
+        end
+
+        # Set the currency of all prices
+        currency = book["x-currency"]
+        book["prices"].each do |price|
+          price["currency"] = currency
+        end
+
+        missing_contributors = (1..(book["contributors"] || []).size).to_a - contributor_columns_used
+        if missing_contributors.any?
+          field_name = "Contributor #{missing_contributors.min}"
+          issues.push(
+            error_code: "contributor.missing",
+            message: "A contributor was specified without all previous contributors.",
+            data: cell_reference(field_name, row_number, row_headers).merge(
+              field_name: field_name
+            )
+          )
         end
 
         [book, issues]
