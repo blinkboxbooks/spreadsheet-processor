@@ -71,12 +71,10 @@ module Blinkbox
             first = parts.shift
             data["Inverted"] = [parts.join(" "), first].join(", ")
           end
-          doc = {
-            contributors: {
-              "names" => {
-                "display" => data["Name"],
-                "sort" => data["Inverted"]
-              }
+          contributor = {
+            "names" => {
+              "display" => data["Name"],
+              "sort" => data["Inverted"]
             }
           }
 
@@ -87,10 +85,10 @@ module Blinkbox
             message: "Contributor Role must is invalid"
           } if !CONTRIBUTOR_ROLES.has_key?(data["Role"].to_s.downcase)
 
-          doc[:contributors]["role"] = CONTRIBUTOR_ROLES[data["Role"].to_s.downcase]
+          contributor["role"] = CONTRIBUTOR_ROLES[data["Role"].to_s.downcase]
 
           # Biography
-          doc[:contributors]["biography"] = data["Bio"] unless data["Bio"].to_s.empty? 
+          contributor["biography"] = data["Bio"] unless data["Bio"].to_s.empty? 
 
           # Photo URL
           if !data["Photo URL"].to_s.empty?
@@ -100,7 +98,7 @@ module Blinkbox
               message: "Contributor Photo URL must be a URL"
             } unless data["Photo URL"] =~ URI.regexp
 
-            doc[:contributors]["media"] = {
+            contributor["media"] = {
               "images" => [{
                 "classification" => [{
                   "realm" => "type",
@@ -115,12 +113,14 @@ module Blinkbox
           end
 
           {
-            data: doc
+            data: {
+              contributors: [contributor]
+            }
           }
         }),
         "Contributor 2" => contributor.dup,
         "Contributor 3" => contributor.dup,
-        "Publication date" => proc { |field|
+        "Publication Date" => proc { |field|
           if !field.respond_to?(:strftime)
             if field.to_s =~ /^(?<year>(?:16|17|18|19|20)\d\d)-?(?<month>\d\d)-?(?<day>\d\d)$/
               parts = Regexp.last_match
@@ -159,10 +159,10 @@ module Blinkbox
           } unless field.to_s =~ /^\d+(?:\.\d+)?$/
           {
             data: {
-              prices: {
+              prices: [{
                 "amount" => field.to_f,
                 "includesTax?" => false
-              }
+              }]
             }
           }
         },
@@ -173,10 +173,10 @@ module Blinkbox
           } unless field.to_s =~ /^\d+(?:\.\d+)?$/
           {
             data: {
-              prices: {
+              prices: [{
                 "amount" => field.to_f,
                 "includesTax?" => true
-              }
+              }]
             }
           }
         },
@@ -188,6 +188,60 @@ module Blinkbox
           {
             data: {
               "x-currency" => field.upcase
+            }
+          }
+        },
+        "Page Count" => proc { |field|
+          next { data: {} } if field.nil? || field.to_s.empty?
+          next {
+            error_code: "page_count.invalid",
+            message: "Page count must be an integer or empty"
+          } unless field.to_s =~ /^\d+$/
+          {
+            data: {
+              "pages" => field.to_i
+            }
+          }
+        },
+        "Publisher" => proc { |field|
+          next {
+            error_code: "publisher.invalid",
+            message: "A publisher must be specified"
+          } if field.nil? || field.to_s.empty?
+          {
+            data: {
+              "publisher" => field
+            }
+          }
+        },
+        "BISAC Main Subject" => proc { |field|
+          next {
+            error_code: "main_bisac.invalid",
+            message: "BISAC codes are three letters followed by 6 numbers."
+          } unless field =~ /^[A-Z]{3}\d{6}$/i
+          {
+            data: {
+              subjects: [{
+                "type" => "BISAC",
+                "code" => field
+              }]
+            }
+          }
+        },
+        "Additional BISAC Subjects (comma separated)" => proc { |field|
+          codes = field.to_s.split(/[,;\ ]\ ?/)
+          next {
+            error_code: "additional_bisac.invalid",
+            message: "BISAC codes are three letters followed by 6 numbers, and must be separated with spaces, commas or semicolons."
+          } if codes.select { |code| !code.match(/^[A-Z]{3}\d{6}$/i) }.any?
+          {
+            data: {
+              subjects: codes.map { |code|
+                {
+                  "type" => "BISAC",
+                  "code" => code
+                }
+              }
             }
           }
         }
@@ -276,7 +330,7 @@ module Blinkbox
             data.keys.each do |key|
               next unless key.is_a?(Symbol)
               # Symbol keys should be treated like arrays and merged
-              data[key.to_s] = (book[key.to_s] || []) + [data[key]]
+              data[key.to_s] = (book[key.to_s] || []) + data[key]
               data.delete(key)
             end
             book.merge!(data)

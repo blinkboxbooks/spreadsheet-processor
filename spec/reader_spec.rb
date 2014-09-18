@@ -47,7 +47,7 @@ context Blinkbox::SpreadsheetProcessor::Reader do
         'Title' => "A valid title",
         'Subtitle' => "A valid subtitle",
         'Language' => "eng",
-        'Publication date' => "20140911",
+        'Publication Date' => "20140911",
         'Contributor 1' => "Too Small",
         'Contributor 1 Inverted' => "Small, Too",
         'Contributor 1 Role' => "Author",
@@ -176,7 +176,7 @@ context Blinkbox::SpreadsheetProcessor::Reader do
     describe "for dates" do
       ["2014-09-11", "20140911", Date.new(2014, 9, 11)].each do |date|
         it "must accept publication dates: #{date}" do
-          row = valid_row(with: { 'Publication date' => date })
+          row = valid_row(with: { 'Publication Date' => date })
 
           book, issues = described_class.send(:validate_spreadsheet_row_hash, row, 0)
           expect(issues.size).to eq(0)
@@ -185,9 +185,9 @@ context Blinkbox::SpreadsheetProcessor::Reader do
         end
       end
 
-      ["09-11-2014", "01-30-2014", "11092014", 1410431742].each do |date|
-        it "must reject a row with invalid publication dates" do
-          row = valid_row(with: { 'Publication date' => date })
+      [invalid_headings['Publication Date'], "09-11-2014", "01-30-2014", "11092014", 1410431742].each do |date|
+        it "must reject a row with invalid publication date: (#{date.class}) #{date}" do
+          row = valid_row(with: { 'Publication Date' => date })
 
           book, issues = described_class.send(:validate_spreadsheet_row_hash, row, 0)
           expect(issues.map { |i| i[:error_code] }).to include("publish_date.invalid")
@@ -428,8 +428,18 @@ context Blinkbox::SpreadsheetProcessor::Reader do
         end
       end
 
-      ["four hundred", "", nil, 341.12].each do |count|
-        it "must reject a row with non-integer page counts" do
+      ["", nil].each do |count|
+        it "must accept empty page counts: #{count}" do
+          row = valid_row(with: { 'Page Count' => count })
+
+          book, issues = described_class.send(:validate_spreadsheet_row_hash, row, 0)
+          expect(issues.size).to eq(0)
+          expect(book["pages"]).to be_nil
+        end
+      end
+
+      ["four hundred", 341.12].each do |count|
+        it "must reject a row with non-integer page counts: #{count.inspect}" do
           row = valid_row(with: { 'Page Count' => count})
 
           book, issues = described_class.send(:validate_spreadsheet_row_hash, row, 0)
@@ -473,7 +483,7 @@ context Blinkbox::SpreadsheetProcessor::Reader do
 
       ["YXZR", "", nil].each do |not_code|
         it "must reject a row with no or invalid main BISAC subjects: #{not_code.inspect}" do
-          row = valid_row(with: { 'BISAC Main Subject' => code })
+          row = valid_row(with: { 'BISAC Main Subject' => not_code })
 
           book, issues = described_class.send(:validate_spreadsheet_row_hash, row, 0)
           expect(issues.map { |i| i[:error_code] }).to include("main_bisac.invalid")
@@ -488,7 +498,7 @@ context Blinkbox::SpreadsheetProcessor::Reader do
           book, issues = described_class.send(:validate_spreadsheet_row_hash, row, 0)
           expect(issues.size).to eq(0)
           bisac_codes = book["subjects"].map { |s| s["type"] == "BISAC" ? s["code"] : nil }.compact
-          expect(bisac_codes).to include(codes)
+          expect(bisac_codes).to include(*codes)
         end
       end
 
@@ -509,6 +519,14 @@ context Blinkbox::SpreadsheetProcessor::Reader do
       end
     end
 
+    describe "for territories" do
+      it "must do territories!"
+    end
+
+    describe "for descriptions" do
+      it "must do descriptions!"
+    end
+
     describe "for issues" do
       invalid_headings.each do |heading, invalid_value|
         it "must include cell references in the issue object for invalid #{heading}" do
@@ -521,9 +539,9 @@ context Blinkbox::SpreadsheetProcessor::Reader do
           book, issues = described_class.send(:validate_spreadsheet_row_hash, row, row_num)
           expect(issues.size).to be > 0, "An incorrect number of issues was received (#{issues.map{ |i| i["message"] }.join(", ")})"
 
-          expect(issues.first["data"]["row"]).to eq(row_num)
-          expect(issues.first["data"]["column"]).to eq(column_num)
-          expect(issues.first["data"]["cell_reference"]).to eq(cell_reference)
+          expect(issues.first[:data][:row]).to eq(row_num)
+          expect(issues.first[:data][:column]).to eq(column_num)
+          expect(issues.first[:data][:cell_reference]).to eq(cell_reference)
         end
       end
     end
