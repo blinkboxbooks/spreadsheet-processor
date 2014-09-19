@@ -270,7 +270,7 @@ module Blinkbox
           next {
             error_code: "territories.invalid",
             message: "Territory codes must be two letter words or 'WORLD'."
-          } if codes.select { |code| !code.match(/^([A-Z]{2}|WORLD)$/i) }.any?
+          } if codes.empty? || codes.select { |code| !code.match(/^([A-Z]{2}|WORLD)$/i) }.any?
           {
             data: {
               "regionalRights" => Hash[codes.map { |code|

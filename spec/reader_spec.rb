@@ -557,7 +557,14 @@ context Blinkbox::SpreadsheetProcessor::Reader do
         end
       end
 
-      it "must <undefined> with empty territories"
+      [" ", "", nil].each do |none|
+        it "must reject a row with no territories: #{none.inspect}" do
+          row = valid_row(with: { 'Territories' => none })
+
+          book, issues = reader.send(:validate_spreadsheet_row_hash, row, 0)
+          expect(issues.map { |i| i[:error_code] }).to include("territories.invalid")
+        end
+      end
     end
 
     describe "for descriptions" do
