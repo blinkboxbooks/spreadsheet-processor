@@ -6,6 +6,7 @@ gem "blinkbox-common_logging"
 gem "blinkbox-messaging"
 gem "blinkbox-mappings"
 gem "roo"
+gem "sanitize"
 
 group :development, :test do
   gem "rspec", "~>2.0"

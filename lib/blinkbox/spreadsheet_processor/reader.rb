@@ -1,9 +1,11 @@
 require "roo"
-require "blinkbox/onix/onix21"
+require "sanitize"
 
 module Blinkbox
   module SpreadsheetProcessor
     class Reader
+      attr_reader :valid_html
+
       REQUIRED_HEADINGS = ["eISBN 13", "Title", "Subtitle", "Contributor 1", "Contributor 1 Inverted", "Contributor 1 Role", "Contributor 1 Bio", "Contributor 1 Photo URL", "Contributor 2", "Contributor 2 Inverted", "Contributor 2 Role", "Contributor 2 Bio", "Contributor 2 Photo URL", "Contributor 3", "Contributor 3 Inverted", "Contributor 3 Role", "Contributor 3 Bio", "Contributor 3 Photo URL", "Publication Date", "List Price ex VAT", "List Price inc VAT", "Currency Type", "Page Count", "Imprint", "Publisher", "Language", "BISAC Main Subject", "Additional BISAC Subjects (comma separated)", "Territories", "Description"]
       CONTRIBUTOR_ROLES = {
         'author'       => 'A01',
@@ -244,10 +246,42 @@ module Blinkbox
               }
             }
           }
+        },
+        "Description" => proc { |field|
+          next {
+            error_code: "description.invalid",
+            message: "A description must be given for the book."
+          } if field.to_s.empty?
+
+          {
+            data: {
+              "descriptions" => [{
+                "classification" => [{
+                  "realm" => "onix_other_text_type_code",
+                  "id" => "01"
+                }],
+                "content" => Sanitize.clean(field.to_s, @valid_html)
+              }]
+            }
+          }
+        },
+        "Territories" => proc { |field|
+          codes = field.to_s.split(/[,;\ ]\ ?/)
+          next {
+            error_code: "territories.invalid",
+            message: "Territory codes must be two letter words or 'WORLD'."
+          } if codes.select { |code| !code.match(/^([A-Z]{2}|WORLD)$/i) }.any?
+          {
+            data: {
+              "regionalRights" => Hash[codes.map { |code|
+                [code.upcase, true]
+              }]
+            }
+          }
         }
       }
 
-      def initialize(filename, format: File.extname(filename)[1..-1].downcase.to_sym)
+      def initialize(filename, format: File.extname(filename)[1..-1].downcase.to_sym, valid_html: Sanitize::Config::RELAXED)
         @roo = case format
         when :xls
           Roo::Excel.new(filename)
@@ -262,6 +296,7 @@ module Blinkbox
         # General set up for the spreadsheets
         @roo.default_sheet = @roo.sheets.first
         @roo.header_line = 1
+        @valid_html = valid_html 
       end
 
       def each_book
@@ -288,7 +323,7 @@ module Blinkbox
 
         2.upto(@roo.last_row) do |row_num|
           row = Hash[@headings.zip(@roo.row(row_num))]
-          book, issues = self.validate_spreadsheet_row(row, row_number)
+          book, issues = validate_spreadsheet_row(row, row_number)
 
           if issues.any?
             failures.push(*issues)
@@ -303,7 +338,7 @@ module Blinkbox
 
       private
 
-      def self.validate_spreadsheet_row_hash(row, row_number)
+      def validate_spreadsheet_row_hash(row, row_number)
         row_headers = row.keys
         # Map the contributor information into one hash
         1.upto(3) do |n|
@@ -321,8 +356,7 @@ module Blinkbox
         contributor_columns_used = []
 
         CELL_VALIDATION.each do |field_name, validator|
-          validation_result = validator.call(row[field_name])
-
+          validation_result = instance_exec(row[field_name], &validator)
           contributor_columns_used.push(Regexp.last_match[1].to_i) if field_name =~ /^Contributor (\d)$/ && validation_result[:data] != {}
 
           if !validation_result[:error_code]
@@ -371,7 +405,7 @@ module Blinkbox
         [book, issues]
       end
 
-      def self.cell_reference(header, row_number, row_headers)
+      def cell_reference(header, row_number, row_headers)
         col_number = row_headers.index(header)
         cell_reference = col_number.nil? ? "-" : "#{Roo::Base.number_to_letter(col_number)}#{row_number}"
         {
