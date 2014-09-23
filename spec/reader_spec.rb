@@ -180,7 +180,7 @@ context Blinkbox::SpreadsheetProcessor::Reader do
     end
 
     describe "for dates" do
-      ["2014-09-11", "20140911", Date.new(2014, 9, 11)].each do |date|
+      ["2014-09-11", "20140911", Date.new(2014, 9, 11), 20140911.0].each do |date|
         it "must accept publication dates: #{date}" do
           row = valid_row(with: { 'Publication Date' => date })
 
