@@ -12,8 +12,18 @@ module Blinkbox
       uri = URI(mapped_uri)
       location = File.join("/mnt", uri.hostname, uri.path)
 
-      File.open(location) do |f|
-        yield f
+      if block_given?
+        File.open(location) do |f|
+          yield f
+        end
+      else
+        io = File.open(location)
+
+        def io.unlink
+          # Do nothing
+        end
+
+        io
       end
     end
   end

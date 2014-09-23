@@ -55,7 +55,7 @@ module Blinkbox
 
       def start
         @queue.subscribe do |metadata, obj|
-          case obj.class
+          case obj
           when CommonMessaging::IngestionFilePendingV2
             process_spreadsheet(metadata, obj)
             :ack
@@ -79,11 +79,11 @@ module Blinkbox
       def process_spreadsheet(metadata, obj)
         downloaded_file_io = @mapper.open(obj['source']['uri'])
         begin
-          reader = Reader.new(downloaded_file_io)
+          reader = Reader.new(downloaded_file_io.path)
           source = obj['source'].merge(
             'system' => {
-              name: @service_name,
-              version: VERSION
+              'name' => @service_name,
+              'version' => VERSION
             }
           )
           issues = reader.each_book do |book|
@@ -98,19 +98,23 @@ module Blinkbox
               }
             ]
             book[:source] = source
-            book_obj = IngestionBookMetadataV2.new(book)
+            book_obj = CommonMessaging::IngestionBookMetadataV2.new(book)
 
-            @exhange.publish(book_obj)
+            @exchange.publish(book_obj)
+            # TODO: Proper log message
+            @logger.info "Book #{book['isbn']} has been published"
           end
 
           if issues.any?
-            rej_obj = IngestionFileRejectedV2.new(
+            rej_obj = CommonMessaging::IngestionFileRejectedV2.new(
               # TODO: Format of rejection reasons
               rejectionReasons: issues,
               source: source
             )
 
-            @exhange.publish(rej_obj)
+            @exchange.publish(rej_obj)
+            # TODO: Proper error message
+            @logger.info "Issues were found with a file: #{issues.join(", ")}"
           end
         ensure
           downloaded_file_io.close

@@ -94,7 +94,7 @@ context Blinkbox::SpreadsheetProcessor::Reader do
     end
 
     describe "for isbns" do
-      ["9780111222333", "9781234567890", "9790987654321", 9780111222333].each do |isbn|
+      ["9780111222333", "9781234567890", "9790987654321", 9780111222333, 9780111222333.0].each do |isbn|
         it "must accept ISBNs: (#{isbn.class}) #{isbn}" do
           row = valid_row(with: {
             'eISBN 13' => isbn
@@ -102,7 +102,7 @@ context Blinkbox::SpreadsheetProcessor::Reader do
 
           book, issues = reader.send(:validate_spreadsheet_row_hash, row, 0)
           expect(issues.size).to eq(0)
-          expect(book["isbn"]).to eq(isbn.to_s)
+          expect(book["isbn"]).to eq(isbn.to_i.to_s)
         end
       end
 

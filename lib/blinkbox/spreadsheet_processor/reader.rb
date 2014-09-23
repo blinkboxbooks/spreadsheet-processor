@@ -22,9 +22,9 @@ module Blinkbox
       # A hash detailing the validation for each required heading
       CELL_VALIDATION = {
         "eISBN 13" => proc { |field|
-          if field.to_s =~ /^\d{13}$/
+          if field.to_s =~ /^(\d{13})(?:\.0)?$/
             {
-              data: { "isbn" => field.to_s }
+              data: { "isbn" => Regexp.last_match[1] }
             }
           else
             {
@@ -324,7 +324,7 @@ module Blinkbox
 
         2.upto(@roo.last_row) do |row_num|
           row = Hash[@headings.zip(@roo.row(row_num))]
-          book, issues = validate_spreadsheet_row(row, row_number)
+          book, issues = validate_spreadsheet_row_hash(row, row_num)
 
           if issues.any?
             failures.push(*issues)
