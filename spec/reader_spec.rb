@@ -424,7 +424,7 @@ context Blinkbox::SpreadsheetProcessor::Reader do
     end
 
     describe "for page counts" do
-      ["143", 143].each do |count|
+      ["143", 143, 143.0].each do |count|
         it "must accept page counts: #{count}" do
           row = valid_row(with: { 'Page Count' => count })
 
@@ -435,7 +435,7 @@ context Blinkbox::SpreadsheetProcessor::Reader do
       end
 
       ["", nil].each do |count|
-        it "must accept empty page counts: #{count}" do
+        it "must accept empty page counts: #{count.inspect}" do
           row = valid_row(with: { 'Page Count' => count })
 
           book, issues = reader.send(:validate_spreadsheet_row_hash, row, 0)

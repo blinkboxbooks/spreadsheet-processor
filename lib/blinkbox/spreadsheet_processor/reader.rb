@@ -199,10 +199,10 @@ module Blinkbox
           next {
             error_code: "page_count.invalid",
             message: "Page count must be an integer or empty"
-          } unless field.to_s =~ /^\d+$/
+          } unless field.to_s =~ /^(\d+)(?:\.0)?$/
           {
             data: {
-              "pages" => field.to_i
+              "pages" => Regexp.last_match[1].to_i
             }
           }
         },
