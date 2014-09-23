@@ -74,6 +74,7 @@ module Blinkbox
             data["Inverted"] = [parts.join(" "), first].join(", ")
           end
           contributor = {
+            "classification" => [],
             "names" => {
               "display" => data["Name"],
               "sort" => data["Inverted"]

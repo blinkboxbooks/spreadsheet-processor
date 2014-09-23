@@ -8,11 +8,18 @@ module Blinkbox
       attr_reader :logger
 
       def initialize(options)
-        @logger = CommonLogging.from_config(options.tree(:logging))
-        @logger.facility_version = VERSION
-        service_name = options[:'logging.gelf.facility']
+        # @logger = CommonLogging.from_config(options.tree(:logging))
+        @logger = Logger.new(STDOUT)
+        # @logger.facility_version = VERSION
+        @service_name = options[:'logging.gelf.facility']
 
-        CommonMessaging.configure(options.tree(:rabbitmq), @logger)
+        CommonMessaging.configure!(options.tree(:rabbitmq), @logger)
+
+        schema_root = File.join(__dir__, "../../../schemas")
+        schema_files = File.join(schema_root, "ingestion")
+        CommonMessaging.init_from_schema_at(schema_files, schema_root).each do |klass|
+          @logger.debug "Loaded schema file for #{klass::CONTENT_TYPE}"
+        end
 
         file_found_content_types = [
           "application/vnd.ms-excel",
@@ -21,27 +28,27 @@ module Blinkbox
 
         bindings = file_found_content_types.map do |content_type|
           {
-            "content-type" => "application/vnd.blinkbox.books.ingestion.file.found.v2+json",
+            "content-type" => "application/vnd.blinkbox.books.ingestion.file.pending.v2+json",
             "referenced-content-type" => content_type,
             "x-match" => "all"
           }
         end
 
         @queue = CommonMessaging::Queue.new(
-          "#{service_name}.pending_assets",
+          "#{@service_name.tr('/','.')}.pending_assets",
           exchange: "Marvin",
           bindings: bindings
         )
 
         @exchange = CommonMessaging::Exchange.new(
           "Marvin",
-          facility: service_name,
+          facility: @service_name,
           facility_version: VERSION
         )
 
         @mapper = Mappings.new(
           options[:'mapper.url'],
-          service_name: service_name
+          service_name: @service_name
         )
         @logger.debug "Spreadsheet Processor v#{VERSION} initialized"
       end
@@ -49,7 +56,7 @@ module Blinkbox
       def start
         @queue.subscribe do |metadata, obj|
           case obj.class
-          when CommonMessaging::IngestionFileFoundV2
+          when CommonMessaging::IngestionFilePendingV2
             process_spreadsheet(metadata, obj)
             :ack
           else
@@ -75,7 +82,7 @@ module Blinkbox
           reader = Reader.new(downloaded_file_io)
           source = obj['source'].merge(
             'system' => {
-              name: @service_name.tr('.','/'),
+              name: @service_name,
               version: VERSION
             }
           )

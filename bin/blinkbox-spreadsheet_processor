@@ -6,11 +6,15 @@ require "blinkbox/spreadsheet_processor"
 options = Blinkbox::CommonConfig.new
 
 begin
-  p = Blinkbox::SpreadsheetProcessor::Service.new(options)
-  p.start
-  p.join
+  processor = Blinkbox::SpreadsheetProcessor::Service.new(options)
+  processor.start
+  processor.join
 rescue SystemExit, Interrupt, SignalException
-  p.stop
+  processor.stop
 rescue Exception => e
-  p.logger.fatal e
+  if processor && processor.logger
+    processor.logger.fatal e
+  else
+    raise e
+  end
 end

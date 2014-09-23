@@ -633,5 +633,12 @@ context Blinkbox::SpreadsheetProcessor::Reader do
         end
       end
     end
+
+    it "must create schema valid ingestion.book.metadata.v2 documents" do
+      book, issues = reader.send(:validate_spreadsheet_row_hash, valid_row, 0)
+      expect {
+        Blinkbox::CommonMessaging::IngestionBookMetadataV2.new(book)
+      }.to_not raise_error
+    end
   end
 end
