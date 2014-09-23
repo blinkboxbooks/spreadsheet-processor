@@ -417,9 +417,9 @@ context Blinkbox::SpreadsheetProcessor::Reader do
         book, issues = reader.send(:validate_spreadsheet_row_hash, valid_row, 0)
         expect(issues.size).to eq(0)
         wholesale_prices = (book["prices"] || []).select { |p| p["agency?"] === true }
-        expect(wholesale_prices.size).to eq(2)
-        wholesale_prices = (book["prices"] || []).select { |p| p["agency?"] === false }
         expect(wholesale_prices.size).to eq(0)
+        wholesale_prices = (book["prices"] || []).select { |p| p["agency?"] === false }
+        expect(wholesale_prices.size).to eq(2)
       end
 
       ["", nil, "en"].each do |code|

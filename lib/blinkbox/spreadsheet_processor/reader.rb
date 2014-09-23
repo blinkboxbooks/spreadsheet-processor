@@ -388,6 +388,7 @@ module Blinkbox
         currency = book.delete("x-currency")
         book["prices"].each do |price|
           price["currency"] = currency
+          price["agency?"] = false
         end
 
         missing_contributors = (1..(book["contributors"] || []).size).to_a - contributor_columns_used
