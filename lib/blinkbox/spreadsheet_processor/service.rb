@@ -89,15 +89,17 @@ module Blinkbox
           issues = reader.each_book do |book|
             book['classification'] = [
               {
-                realm: "isbn",
-                id: book[:isbn]
+                'realm' => "isbn",
+                'id' => book['isbn']
               },
               {
-                realm: "source_username",
-                id: source['username']
+                'realm' => "source_username",
+                'id' => source['username']
               }
             ]
-            book[:source] = source
+            book['source'] = source
+            require "pp"
+            pp book
             book_obj = CommonMessaging::IngestionBookMetadataV2.new(book)
 
             @exchange.publish(book_obj)

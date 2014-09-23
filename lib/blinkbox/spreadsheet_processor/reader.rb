@@ -74,7 +74,6 @@ module Blinkbox
             data["Inverted"] = [parts.join(" "), first].join(", ")
           end
           contributor = {
-            "classification" => [],
             "names" => {
               "display" => data["Name"],
               "sort" => data["Inverted"]
@@ -124,10 +123,10 @@ module Blinkbox
         "Contributor 2" => contributor.dup,
         "Contributor 3" => contributor.dup,
         "Publication Date" => proc { |field|
-          if !field.respond_to?(:strftime)
+          if !field.respond_to?(:utc)
             if field.to_s =~ /^(?<year>(?:16|17|18|19|20)\d\d)-?(?<month>\d\d)-?(?<day>\d\d)(?:\.0)?$/
               parts = Regexp.last_match
-              field = Date.new(parts[:year].to_i, parts[:month].to_i, parts[:day].to_i)
+              field = Time.new(parts[:year].to_i, parts[:month].to_i, parts[:day].to_i)
             else
               next {
                 error_code: "publish_date.invalid",
@@ -138,7 +137,7 @@ module Blinkbox
           {
             data: {
               "dates" => {
-                "publish" => field
+                "publish" => field.utc.iso8601
               }
             }
           }
@@ -258,7 +257,7 @@ module Blinkbox
             data: {
               "descriptions" => [{
                 "classification" => [{
-                  "realm" => "onix_other_text_type_code",
+                  "realm" => "onix:33",
                   "id" => "01"
                 }],
                 "content" => Sanitize.clean(field.to_s, @valid_html)
@@ -386,7 +385,7 @@ module Blinkbox
         end
 
         # Set the currency of all prices
-        currency = book["x-currency"]
+        currency = book.delete("x-currency")
         book["prices"].each do |price|
           price["currency"] = currency
         end

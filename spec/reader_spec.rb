@@ -180,14 +180,14 @@ context Blinkbox::SpreadsheetProcessor::Reader do
     end
 
     describe "for dates" do
-      ["2014-09-11", "20140911", Date.new(2014, 9, 11), 20140911.0].each do |date|
-        it "must accept publication dates: #{date}" do
+      ["2014-09-11", "20140911", Date.new(2014, 9, 11), Time.new(2014, 9, 11), 20140911.0].each do |date|
+        it "must accept publication dates: (#{date.class}) #{date}" do
           row = valid_row(with: { 'Publication Date' => date })
 
           book, issues = reader.send(:validate_spreadsheet_row_hash, row, 0)
           expect(issues.size).to eq(0)
           expect(book["dates"]).to be_a(Hash)
-          expect(book["dates"]["publish"]).to eq(Date.new(2014, 9, 11))
+          expect(book["dates"]["publish"]).to eq(Time.new(2014, 9, 11).utc.iso8601)
         end
       end
 
@@ -411,6 +411,15 @@ context Blinkbox::SpreadsheetProcessor::Reader do
           prices_with_correct_currency_codes = (book["prices"] || []).select { |p| p["currency"] == code.upcase }
           expect(prices_with_correct_currency_codes.size).to eq(2)
         end
+      end
+
+      it "must assume rows are wholesale prices" do
+        book, issues = reader.send(:validate_spreadsheet_row_hash, valid_row, 0)
+        expect(issues.size).to eq(0)
+        wholesale_prices = (book["prices"] || []).select { |p| p["agency?"] === true }
+        expect(wholesale_prices.size).to eq(2)
+        wholesale_prices = (book["prices"] || []).select { |p| p["agency?"] === false }
+        expect(wholesale_prices.size).to eq(0)
       end
 
       ["", nil, "en"].each do |code|
