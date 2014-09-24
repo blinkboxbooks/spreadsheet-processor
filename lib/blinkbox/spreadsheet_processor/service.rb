@@ -97,14 +97,16 @@ module Blinkbox
                 'id' => source['username']
               }
             ]
-            book['source'] = source
-            require "pp"
-            pp book
+            book['source'] = {
+              '$remaining' => source
+            }
+            # TODO: move this to the common messgaing library?
+            book['$schema'] = 'ingestion.book.metadata.v2'
             book_obj = CommonMessaging::IngestionBookMetadataV2.new(book)
 
-            @exchange.publish(book_obj)
+            message_id = @exchange.publish(book_obj)
             # TODO: Proper log message
-            @logger.info "Book #{book['isbn']} has been published"
+            @logger.info "Book #{book['isbn']} has been published: #{message_id}"
           end
 
           if issues.any?
@@ -114,9 +116,9 @@ module Blinkbox
               source: source
             )
 
-            @exchange.publish(rej_obj)
+            message_id = @exchange.publish(rej_obj)
             # TODO: Proper error message
-            @logger.info "Issues were found with a file: #{issues.join(", ")}"
+            @logger.info "Issues were found with a file: #{issues.join(", ")}. Message sent: #{message_id}"
           end
         ensure
           downloaded_file_io.close
