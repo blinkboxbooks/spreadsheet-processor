@@ -8,9 +8,8 @@ module Blinkbox
       attr_reader :logger
 
       def initialize(options)
-        # @logger = CommonLogging.from_config(options.tree(:logging))
-        @logger = Logger.new(STDOUT)
-        # @logger.facility_version = VERSION
+        @logger = CommonLogging.from_config(options.tree(:logging))
+        @logger.facility_version = VERSION
         @service_name = options[:'logging.gelf.facility']
 
         CommonMessaging.configure!(options.tree(:rabbitmq), @logger)
@@ -60,7 +59,16 @@ module Blinkbox
             process_spreadsheet(metadata, obj)
             :ack
           else
-            @logger.error "Unexpected message in the queue (#{obj.content_type}; id: #{metadata[:message_id]}). Sent to DLQ."
+            @logger.error(
+              message: "Unexpected message in the queue",
+              message_id: metadata[:message_id],
+              data: {
+                object_class: obj.class,
+                object_as_string: obj.to_s,
+                object: obj,
+                object_content_type: (obj.content_type rescue "n/a")
+              }
+            )
             :reject
           end
         end
@@ -104,9 +112,17 @@ module Blinkbox
             book['$schema'] = 'ingestion.book.metadata.v2'
             book_obj = CommonMessaging::IngestionBookMetadataV2.new(book)
 
+            # TODO: Add extra bits to common logging that type:remote uris trigger the correct header
             message_id = @exchange.publish(book_obj)
             # TODO: Proper log message
-            @logger.info "Book #{book['isbn']} has been published: #{message_id}"
+            @logger.info(
+              message: "Details for book #{book['isbn']} have been published",
+              isbn: book['isbn'],
+              message_id: message_id,
+              data: {
+                source: source
+              }
+            )
           end
 
           if issues.any?
@@ -118,7 +134,14 @@ module Blinkbox
 
             message_id = @exchange.publish(rej_obj)
             # TODO: Proper error message
-            @logger.info "Issues were found with a file: #{issues.join(", ")}. Message sent: #{message_id}"
+            @logger.info(
+              message: "Issues were found with formatting of a spreadsheet",
+              message_id: message_id,
+              data: {
+                source: source,
+                issues: issues
+              }
+            )
           end
         ensure
           downloaded_file_io.close
