@@ -49,7 +49,7 @@ module Blinkbox
           options[:'mapper.url'],
           service_name: @service_name
         )
-        @logger.debug "Spreadsheet Processor v#{VERSION} initialized"
+        @logger.info "Spreadsheet Processor v#{VERSION} initialized"
       end
 
       def start
