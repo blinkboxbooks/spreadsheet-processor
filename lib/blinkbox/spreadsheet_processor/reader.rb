@@ -1,4 +1,5 @@
 require "roo"
+require "roo/base/mathn_monkey_patch"
 require "sanitize"
 
 module Blinkbox
@@ -84,7 +85,7 @@ module Blinkbox
           next {
             error_code: "contributor.invalid",
             field_suffix: "Role",
-            message: "Contributor Role must is invalid"
+            message: "Contributor Role is invalid"
           } if !CONTRIBUTOR_ROLES.has_key?(data["Role"].to_s.downcase)
 
           contributor["role"] = CONTRIBUTOR_ROLES[data["Role"].to_s.downcase]
@@ -124,10 +125,11 @@ module Blinkbox
         "Contributor 3" => contributor.dup,
         "Publication Date" => proc { |field|
           if !field.respond_to?(:utc)
-            if field.to_s =~ /^(?<year>(?:16|17|18|19|20)\d\d)-?(?<month>\d\d)-?(?<day>\d\d)(?:\.0)?$/
+            begin
+              raise unless field.to_s =~ /^(?:(?<year>(?:16|17|18|19|20)\d\d)[-\/]?(?<month>\d\d)[-\/]?(?<day>\d\d)(?:\.0)?|(?<day>\d\d)[-\/]?(?<month>\d\d)[-\/]?(?<year>(?:16|17|18|19|20)\d\d))$/
               parts = Regexp.last_match
               field = Time.new(parts[:year].to_i, parts[:month].to_i, parts[:day].to_i)
-            else
+            rescue
               next {
                 error_code: "publish_date.invalid",
                 message: "'Publication date' must be a date in the format YYYYMMDD"
@@ -281,16 +283,14 @@ module Blinkbox
         }
       }
 
-      def initialize(filename, format: File.extname(filename)[1..-1].downcase.to_sym, valid_html: Sanitize::Config::RELAXED)
-        @roo = case format
-        when :xls
+      def initialize(filename, content_type, valid_html: Sanitize::Config::RELAXED)
+        @roo = case content_type
+        when "application/vnd.ms-excel"
           Roo::Excel.new(filename)
-        when :xlsx
+        when "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
           Roo::Excelx.new(filename)
-        when :csv
-          Roo::CSV.new(filename)
         else
-          raise ArgumentError, "Reader cannot cope with #{format} format spreadsheets."
+          raise ArgumentError, "Reader cannot cope with #{content_type} spreadsheets."
         end
 
         # General set up for the spreadsheets
@@ -407,7 +407,7 @@ module Blinkbox
       end
 
       def cell_reference(header, row_number, row_headers)
-        col_number = row_headers.index(header)
+        col_number = (row_headers.index(header) + 1).to_i
         cell_reference = col_number.nil? ? "-" : "#{Roo::Base.number_to_letter(col_number)}#{row_number}"
         {
           row: row_number,

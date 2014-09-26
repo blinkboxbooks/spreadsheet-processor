@@ -1,3 +1,5 @@
+p dir = File.expand_path(File.join(__dir__, "../../../../common_logging/lib"))
+$: << dir
 require "blinkbox/common_messaging"
 require "blinkbox/common_logging"
 require "blinkbox/mappings"
@@ -60,7 +62,7 @@ module Blinkbox
             :ack
           else
             @logger.error(
-              message: "Unexpected message in the queue",
+              short_message: "Unexpected message in the queue",
               message_id: metadata[:message_id],
               data: {
                 object_class: obj.class,
@@ -87,13 +89,13 @@ module Blinkbox
       def process_spreadsheet(metadata, obj)
         downloaded_file_io = @mapper.open(obj['source']['uri'])
         begin
-          reader = Reader.new(downloaded_file_io.path)
           source = obj['source'].merge(
             'system' => {
               'name' => @service_name,
               'version' => VERSION
             }
           )
+          reader = Reader.new(downloaded_file_io.path, source['contentType'])
           issues = reader.each_book do |book|
             book['classification'] = [
               {
@@ -112,22 +114,20 @@ module Blinkbox
             book['$schema'] = 'ingestion.book.metadata.v2'
             book_obj = CommonMessaging::IngestionBookMetadataV2.new(book)
 
-            # TODO: Add extra bits to common logging that type:remote uris trigger the correct header
+            # TODO: Add extra bits to common messaging that type:remote uris trigger the correct header
             message_id = @exchange.publish(book_obj)
-            # TODO: Proper log message
             @logger.info(
-              message: "Details for book #{book['isbn']} have been published",
+              short_message: "Details for book #{book['isbn']} have been published",
               isbn: book['isbn'],
               message_id: message_id,
               data: {
-                source: source
+                source: source.dup
               }
             )
           end
 
           if issues.any?
             rej_obj = CommonMessaging::IngestionFileRejectedV2.new(
-              # TODO: Format of rejection reasons
               rejectionReasons: issues,
               source: source
             )
@@ -135,10 +135,10 @@ module Blinkbox
             message_id = @exchange.publish(rej_obj)
             # TODO: Proper error message
             @logger.info(
-              message: "Issues were found with formatting of a spreadsheet",
+              short_message: "Issues were found with formatting of a spreadsheet",
               message_id: message_id,
               data: {
-                source: source,
+                source: source.dup,
                 issues: issues
               }
             )

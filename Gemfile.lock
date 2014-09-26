@@ -12,8 +12,6 @@ GEM
     blinkbox-common_config (0.2.0)
       java_properties
       ruby-units (~> 1.4)
-    blinkbox-common_logging (0.3.1)
-      gelf
     blinkbox-common_messaging (0.1.0)
       activesupport
       bunny (~> 1.4)
@@ -41,7 +39,7 @@ GEM
     minitest (5.4.1)
     multi_json (1.10.1)
     multi_test (0.1.1)
-    nokogiri (1.6.2.1)
+    nokogiri (1.6.3.1)
       mini_portile (= 0.6.0)
     rake (10.3.2)
     roo (1.13.2)
@@ -62,10 +60,10 @@ GEM
     rspec-support (3.0.3)
     ruby-ole (1.2.11.7)
     ruby-units (1.4.5)
-    rubyzip (1.1.4)
+    rubyzip (1.1.6)
     sanitize (2.1.0)
       nokogiri (>= 1.4.4)
-    spreadsheet (0.9.7)
+    spreadsheet (1.0.0)
       ruby-ole (>= 1.0)
     thread_safe (0.3.4)
     tzinfo (1.2.2)
@@ -76,9 +74,9 @@ PLATFORMS
 
 DEPENDENCIES
   blinkbox-common_config (~> 0.2.0)
-  blinkbox-common_logging (~> 0.3.0)
   blinkbox-common_messaging
   cucumber
+  gelf
   rake
   roo
   rspec (~> 3.0)

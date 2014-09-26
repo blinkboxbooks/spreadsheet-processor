@@ -191,7 +191,18 @@ context Blinkbox::SpreadsheetProcessor::Reader do
         end
       end
 
-      [invalid_headings['Publication Date'], "09-11-2014", "01-30-2014", "11092014", 1410431742].each do |date|
+      ["11-09-2014", "11/09/2014"].each do |date|
+        it "must assume inverted dates are in British order: #{date}" do
+          row = valid_row(with: { 'Publication Date' => date })
+
+          book, issues = reader.send(:validate_spreadsheet_row_hash, row, 0)
+          expect(issues.size).to eq(0)
+          expect(book["dates"]).to be_a(Hash)
+          expect(book["dates"]["publish"]).to eq(Time.new(2014, 9, 11).utc.iso8601)
+        end
+      end
+
+      [invalid_headings['Publication Date'], "01-30-2014", 1410431742].each do |date|
         it "must reject a row with invalid publication date: (#{date.class}) #{date}" do
           row = valid_row(with: { 'Publication Date' => date })
 
@@ -629,7 +640,7 @@ context Blinkbox::SpreadsheetProcessor::Reader do
         it "must include cell references in the issue object for invalid #{heading}" do
           row = valid_row(with: { heading => invalid_value })
 
-          column_num = row.keys.index(heading)
+          column_num = row.keys.index(heading) + 1
           row_num = 3
           cell_reference = "#{Roo::Base.number_to_letter(column_num)}#{row_num}"
 
