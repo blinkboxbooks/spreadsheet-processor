@@ -1,13 +1,13 @@
 require "blinkbox/spreadsheet_processor/reader"
 
 context Blinkbox::SpreadsheetProcessor::Reader do
-  subject(:reader) {
-    reader = described_class.allocate
-    reader.instance_variable_set(:'@valid_html', Sanitize::Config::RELAXED)
-    reader
-  }
-
   describe "#validate_spreadsheet_row_hash" do
+    subject(:reader) {
+      reader = described_class.allocate
+      reader.instance_variable_set(:'@valid_html', Sanitize::Config::RELAXED)
+      reader
+    }
+
     invalid_headings = {
       "eISBN 13" => "x",
       "Title" => nil,
@@ -652,6 +652,51 @@ context Blinkbox::SpreadsheetProcessor::Reader do
           expect(issues.first[:data][:cell_reference]).to eq(cell_reference)
         end
       end
+    end
+  end
+
+  describe "#each_book" do
+    before :each do 
+      @roo = instance_double(Roo::Excel)
+      @reader = described_class.allocate
+
+      @reader.instance_variable_set(:'@roo', @roo)
+    end
+
+    it "must return one issue and not call the block if headings are not correct" do
+      incorrect_headings = ["something", "incorrect"]
+      rows = 5
+      allow(@roo).to receive(:last_row).and_return(rows)
+      allow(@roo).to receive(:row).and_return(incorrect_headings)
+      issues = @reader.each_book { |book| expect("this").to be "never run" }
+      expect(issues.size).to eq(1)
+      expect(issues.first[:error_code]).to eq("headers.incorrect")
+    end
+
+    it "must yield to the block for every valid row in a spreadsheet" do
+      rows = 5
+      book_content = :book
+      allow(@roo).to receive(:last_row).and_return(rows)
+      allow(@roo).to receive(:row).and_return(Blinkbox::SpreadsheetProcessor::Reader::REQUIRED_HEADINGS)
+      allow(@reader).to receive(:validate_spreadsheet_row_hash).and_return([book_content, []])
+      
+      called = 0
+      @reader.each_book do |book|
+        called += 1
+        expect(book).to eql(book_content), "The method yielded something which wasn't the book"
+      end
+      expect(called).to eq(rows - 1) # One for the header
+    end
+
+    it "must return failures in processing from the block" do
+      rows = 5
+      one_issue = [:issues]
+      allow(@roo).to receive(:last_row).and_return(rows)
+      allow(@roo).to receive(:row).and_return(Blinkbox::SpreadsheetProcessor::Reader::REQUIRED_HEADINGS)
+      allow(@reader).to receive(:validate_spreadsheet_row_hash).and_return([{}, one_issue])
+      issues = @reader.each_book { |book| }
+      expected_issues = one_issue * (rows - 1)
+      expect(issues).to eq(expected_issues)
     end
   end
 end
