@@ -2,6 +2,7 @@ require "blinkbox/spreadsheet_processor/version"
 require "blinkbox/common_messaging"
 require "blinkbox/common_logging"
 require "blinkbox/mappings"
+require "blinkbox/spreadsheet_processor/reader"
 
 module Blinkbox
   module SpreadsheetProcessor
@@ -11,7 +12,8 @@ module Blinkbox
       def initialize(options)
         @logger = CommonLogging.from_config(options.tree(:logging))
         @logger.facility_version = VERSION
-        @service_name = options[:'logging.gelf.facility']
+        @service_name = "Marvin/spreadsheet_processor"
+        raise "logging.gelf.facility is not #{@service_name}." unless @service_name == options[:'logging.gelf.facility']
 
         CommonMessaging.configure!(options.tree(:rabbitmq), @logger)
 
@@ -102,9 +104,7 @@ module Blinkbox
                 'id' => source['username']
               }
             ]
-            book['source'] = {
-              '$remaining' => source
-            }
+            book['source'] = source
             # TODO: move this to the common messgaing library?
             book['$schema'] = 'ingestion.book.metadata.v2'
             book_obj = CommonMessaging::IngestionBookMetadataV2.new(book)
@@ -140,7 +140,7 @@ module Blinkbox
           end
         ensure
           downloaded_file_io.close
-          downloaded_file_io.unlink
+          downloaded_file_io.unlink if downloaded_file_io.respond_to? :unlink
         end
       end
     end

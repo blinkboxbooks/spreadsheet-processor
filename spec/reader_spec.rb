@@ -25,7 +25,7 @@ context Blinkbox::SpreadsheetProcessor::Reader do
       "List Price inc VAT" => "not a price",
       "Currency Type" => "not a currency code",
       "Page Count" => "Not a number",
-      "Publisher" => nil, # Maybe this is allowed?
+      "Publisher" => nil,
       "Language" => "Not a language code",
       "BISAC Main Subject" => "Not a BISAC code",
       "Additional BISAC Subjects (comma separated)" => "Not a BISAC code",

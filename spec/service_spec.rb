@@ -68,7 +68,58 @@ context Blinkbox::SpreadsheetProcessor::Service do
   end
 
   describe "#process_spreadsheet" do
-    it "must accept a file pending v2 object pointing to a spreadsheet and publish a book metadata object for each valid book"
-    it "must accept publish one file rejected object if there are any invalid books"
+    before :each do
+      @service = described_class.allocate
+      @logger = instance_double(Blinkbox::CommonLogging)
+      @service.instance_variable_set(:'@logger', @logger)
+      allow(@logger).to receive(:info)
+      @exchange = instance_double(Blinkbox::CommonMessaging::Exchange)
+      @service.instance_variable_set(:'@exchange', @exchange)
+      allow(@exchange).to receive(:publish)
+      @service.instance_variable_set(:'@mapper', File)
+      @service.instance_variable_set(:'@service_name', "Marvin/spreadsheet_processor")
+    end
+
+    it "must accept a file pending v2 object pointing to a spreadsheet and publish a book metadata object for each valid book" do
+      metadata = {}
+      obj = Blinkbox::CommonMessaging::IngestionFilePendingV2.new(
+        "source" => {
+          "deliveredAt" => "2014-06-23T12:03:14.23Z",
+          "uri" => File.join(__dir__, "data/example_spreadsheet.xlsx"),
+          "username" => "publisher_numero_uno",
+          "fileName" => "filename_from_publisher.xlsx",
+          "role" => "publisher_ftp",
+          "contentType" => "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+          "system" => {
+            "name" => "marvin/watcher",
+            "version" => "1.0.0"
+          }
+        }
+      )
+      @service.send(:process_spreadsheet, metadata, obj)
+      expect(@exchange).to have_received(:publish).with(kind_of(Blinkbox::CommonMessaging::IngestionBookMetadataV2))
+      expect(@logger).to have_received(:info)
+    end
+
+    it "must publish one file rejected object if there are any invalid books" do
+      metadata = {}
+      obj = Blinkbox::CommonMessaging::IngestionFilePendingV2.new(
+        "source" => {
+          "deliveredAt" => "2014-06-23T12:03:14.23Z",
+          "uri" => File.join(__dir__, "data/example_invalid_spreadsheet.xlsx"),
+          "username" => "publisher_numero_uno",
+          "fileName" => "filename_from_publisher.xlsx",
+          "role" => "publisher_ftp",
+          "contentType" => "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+          "system" => {
+            "name" => "marvin/watcher",
+            "version" => "1.0.0"
+          }
+        }
+      )
+      @service.send(:process_spreadsheet, metadata, obj)
+      expect(@exchange).to have_received(:publish).with(kind_of(Blinkbox::CommonMessaging::IngestionFileRejectedV2))
+      expect(@logger).to have_received(:info)
+    end
   end
 end
