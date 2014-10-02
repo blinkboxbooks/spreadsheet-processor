@@ -12,7 +12,7 @@ GEM
     blinkbox-common_config (0.2.0)
       java_properties
       ruby-units (~> 1.4)
-    blinkbox-common_logging (0.3.1)
+    blinkbox-common_logging (0.4.1)
       gelf
     blinkbox-common_messaging (0.1.0)
       activesupport
@@ -80,8 +80,8 @@ PLATFORMS
   ruby
 
 DEPENDENCIES
-  blinkbox-common_config (~> 0.2.0)
-  blinkbox-common_logging (~> 0.3.0)
+  blinkbox-common_config (~> 0.2)
+  blinkbox-common_logging (~> 0.4)
   blinkbox-common_messaging
   cucumber
   rake
