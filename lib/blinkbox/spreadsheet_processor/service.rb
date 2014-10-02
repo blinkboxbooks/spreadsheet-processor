@@ -1,5 +1,4 @@
-p dir = File.expand_path(File.join(__dir__, "../../../../common_logging/lib"))
-$: << dir
+require "blinkbox/spreadsheet_processor/version"
 require "blinkbox/common_messaging"
 require "blinkbox/common_logging"
 require "blinkbox/mappings"
@@ -74,10 +73,6 @@ module Blinkbox
             :reject
           end
         end
-      end
-
-      def join
-
       end
 
       def stop

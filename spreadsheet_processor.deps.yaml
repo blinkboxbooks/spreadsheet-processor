@@ -1,0 +1,28 @@
+version: 0.1
+services:
+  # none
+messaging:
+  - receives:
+      exchange: Marvin
+      headers:
+        content-type: application/vnd.blinkbox.books.ingestion.file.pending.v2+json
+        referenced-content-type: application/vnd.ms-excel
+    publishes:
+      exchange: Marvin
+      headers:
+        content-type: application/vnd.blinkbox.books.ingestion.book.metadata.v2+json
+        remote-uris: true
+  - receives:
+      exchange: Marvin
+      headers:
+        content-type: application/vnd.blinkbox.books.ingestion.file.pending.v2+json
+        referenced-content-type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet
+    publishes:
+      exchange: Marvin
+      headers:
+        content-type: application/vnd.blinkbox.books.ingestion.book.metadata.v2+json
+        remote-uris: true
+  - receives:
+      exchange: Mapping
+      headers:
+        content-type: application/vnd.blinkbox.books.mapping.update.v1+json
