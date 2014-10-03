@@ -191,7 +191,7 @@ context Blinkbox::SpreadsheetProcessor::Reader do
         end
       end
 
-      ["11-09-2014", "11/09/2014"].each do |date|
+      ["11-09-2014", "11/09/2014", "11/9/2014"].each do |date|
         it "must assume inverted dates are in British order: #{date}" do
           row = valid_row(with: { 'Publication Date' => date })
 

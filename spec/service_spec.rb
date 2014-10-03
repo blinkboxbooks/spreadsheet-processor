@@ -73,6 +73,7 @@ context Blinkbox::SpreadsheetProcessor::Service do
       @logger = instance_double(Blinkbox::CommonLogging)
       @service.instance_variable_set(:'@logger', @logger)
       allow(@logger).to receive(:info)
+      allow(@logger).to receive(:debug)
       @exchange = instance_double(Blinkbox::CommonMessaging::Exchange)
       @service.instance_variable_set(:'@exchange', @exchange)
       allow(@exchange).to receive(:publish)

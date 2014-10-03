@@ -10,6 +10,7 @@ module Blinkbox
       attr_reader :logger
 
       def initialize(options)
+        tic
         @logger = CommonLogging.from_config(options.tree(:logging))
         @logger.facility_version = VERSION
         @service_name = "Marvin/spreadsheet_processor"
@@ -20,7 +21,10 @@ module Blinkbox
         schema_root = File.join(__dir__, "../../../schemas")
         schema_files = File.join(schema_root, "ingestion")
         CommonMessaging.init_from_schema_at(schema_files, schema_root).each do |klass|
-          @logger.debug "Loaded schema file for #{klass::CONTENT_TYPE}"
+          @logger.debug(
+            short_message: "Loaded schema file for #{klass::CONTENT_TYPE}",
+            event: :dependency_loaded
+          )
         end
 
         file_found_content_types = [
@@ -52,7 +56,11 @@ module Blinkbox
           options[:'mapper.url'],
           service_name: @service_name
         )
-        @logger.info "Spreadsheet Processor v#{VERSION} initialized"
+        @logger.info(
+          short_message: "Spreadsheet Processor v#{VERSION} initialized",
+          event: :service_started,
+          duration: toc
+        )
       end
 
       def start
@@ -64,6 +72,7 @@ module Blinkbox
           else
             @logger.error(
               short_message: "Unexpected message in the queue",
+              event: :message_uninterpretable,
               message_id: metadata[:message_id],
               data: {
                 object_class: obj.class,
@@ -78,12 +87,19 @@ module Blinkbox
       end
 
       def stop
-
+        tic
+        # What needs to be done here? I need to look into rabbit.
+        @logger.info(
+          short_message: "Spreadsheet Processor v#{VERSION} shut down",
+          event: :service_stopped,
+          duration: toc
+        )
       end
 
       private
 
       def process_spreadsheet(metadata, obj)
+        tic :spreadsheet
         downloaded_file_io = @mapper.open(obj['source']['uri'])
         begin
           source = obj['source'].merge(
@@ -94,6 +110,7 @@ module Blinkbox
           )
           reader = Reader.new(downloaded_file_io.path, source['contentType'])
           issues = reader.each_book do |book|
+            tic :book
             book['classification'] = [
               {
                 'realm' => "isbn",
@@ -113,8 +130,10 @@ module Blinkbox
             message_id = @exchange.publish(book_obj)
             @logger.info(
               short_message: "Details for book #{book['isbn']} have been published",
+              event: :book_details_found,
               isbn: book['isbn'],
               message_id: message_id,
+              duration: toc(:book),
               data: {
                 source: source.dup
               }
@@ -131,6 +150,7 @@ module Blinkbox
             # TODO: Proper error message
             @logger.info(
               short_message: "Issues were found with formatting of a spreadsheet",
+              event: :spreadsheet_invalid,
               message_id: message_id,
               data: {
                 source: source.dup,
@@ -138,6 +158,11 @@ module Blinkbox
               }
             )
           end
+          @logger.debug(
+            short_message: "Spreadsheet processing finished",
+            event: :spreadsheet_finished,
+            duration: toc(:spreadsheet)
+          )
         ensure
           downloaded_file_io.close
           downloaded_file_io.unlink if downloaded_file_io.respond_to? :unlink

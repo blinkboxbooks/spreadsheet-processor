@@ -126,7 +126,7 @@ module Blinkbox
         "Publication Date" => proc { |field|
           if !field.respond_to?(:utc)
             begin
-              raise unless field.to_s =~ /^(?:(?<year>(?:16|17|18|19|20)\d\d)[-\/]?(?<month>\d\d)[-\/]?(?<day>\d\d)(?:\.0)?|(?<day>\d\d)[-\/]?(?<month>\d\d)[-\/]?(?<year>(?:16|17|18|19|20)\d\d))$/
+              raise unless field.to_s =~ /^(?:(?<year>(?:16|17|18|19|20)\d\d)[-\/]?(?<month>[01]?\d)[-\/]?(?<day>[0-3]?\d)(?:\.0)?|(?<day>[0-3]?\d)[-\/]?(?<month>[01]?\d)[-\/]?(?<year>(?:16|17|18|19|20)\d\d))$/
               parts = Regexp.last_match
               field = Time.new(parts[:year].to_i, parts[:month].to_i, parts[:day].to_i)
             rescue
