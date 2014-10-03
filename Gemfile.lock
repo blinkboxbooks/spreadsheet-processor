@@ -9,7 +9,7 @@ GEM
       thread_safe (~> 0.1)
       tzinfo (~> 1.1)
     amq-protocol (1.9.2)
-    blinkbox-common_config (0.2.0)
+    blinkbox-common_config (0.3.1)
       java_properties
       ruby-units (~> 1.4)
     blinkbox-common_logging (0.4.1)

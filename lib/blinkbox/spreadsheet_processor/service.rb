@@ -1,5 +1,4 @@
 require "blinkbox/spreadsheet_processor/version"
-$LOAD_PATH.unshift(File.join(__dir__, "../../../../common_messaging/lib"))
 require "blinkbox/common_messaging"
 require "blinkbox/common_logging"
 require "blinkbox/mappings"

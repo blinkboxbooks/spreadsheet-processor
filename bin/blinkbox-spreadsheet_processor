@@ -1,5 +1,5 @@
 #!/usr/bin/env ruby
-$LOAD_PATH << File.join(__dir__, "../lib")
+$LOAD_PATH.unshift File.join(__dir__, "../lib")
 require "blinkbox/common_config"
 require "blinkbox/spreadsheet_processor"
 

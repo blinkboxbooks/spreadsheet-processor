@@ -3,7 +3,7 @@ source "http://artifactory.blinkbox.local/artifactory/api/gems/rubygems/"
 
 gem "blinkbox-common_config", "~>0.2"
 gem "blinkbox-common_logging", "~>0.4"
-gem "blinkbox-common_messaging"
+gem "blinkbox-common_messaging", "~>0.1"
 # gem "blinkbox-mappings"
 gem "roo"
 gem "sanitize"

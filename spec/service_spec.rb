@@ -52,14 +52,14 @@ context Blinkbox::SpreadsheetProcessor::Service do
     end
 
     it "must send IngestionFilePendingV2 messages for spreadsheet processing" do
-      metadata = {}
+      metadata = { headers: {} }
       obj = Blinkbox::CommonMessaging::IngestionFilePendingV2.allocate
       expect(fake_publish(metadata, obj)).to eq(:ack)
       expect(@service).to have_received(:process_spreadsheet).with(metadata, obj)
     end
 
     it "must log an error and reject other messages" do
-      metadata = {}
+      metadata = { headers: {} }
       obj = Blinkbox::CommonMessaging::IngestionBookMetadataV2.allocate
       expect(fake_publish(metadata, obj)).to eq(:reject)
       expect(@service).to_not have_received(:process_spreadsheet).with(metadata, obj)
@@ -82,7 +82,7 @@ context Blinkbox::SpreadsheetProcessor::Service do
     end
 
     it "must accept a file pending v2 object pointing to a spreadsheet and publish a book metadata object for each valid book" do
-      metadata = {}
+      metadata = { headers: {} }
       obj = Blinkbox::CommonMessaging::IngestionFilePendingV2.new(
         "source" => {
           "deliveredAt" => "2014-06-23T12:03:14.23Z",
@@ -103,7 +103,7 @@ context Blinkbox::SpreadsheetProcessor::Service do
     end
 
     it "must publish one file rejected object if there are any invalid books" do
-      metadata = {}
+      metadata = { headers: {} }
       obj = Blinkbox::CommonMessaging::IngestionFilePendingV2.new(
         "source" => {
           "deliveredAt" => "2014-06-23T12:03:14.23Z",
