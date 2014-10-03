@@ -1,4 +1,5 @@
 require "blinkbox/spreadsheet_processor/version"
+$LOAD_PATH.unshift(File.join(__dir__, "../../../../common_messaging/lib"))
 require "blinkbox/common_messaging"
 require "blinkbox/common_logging"
 require "blinkbox/mappings"
@@ -127,7 +128,7 @@ module Blinkbox
             book_obj = CommonMessaging::IngestionBookMetadataV2.new(book)
 
             # TODO: Add extra bits to common messaging that type:remote uris trigger the correct header
-            message_id = @exchange.publish(book_obj)
+            message_id = @exchange.publish(book_obj, message_id_chain: metadata[:headers]['message_id_chain'])
             @logger.info(
               short_message: "Details for book #{book['isbn']} have been published",
               event: :book_details_found,
@@ -146,7 +147,7 @@ module Blinkbox
               source: source
             )
 
-            message_id = @exchange.publish(rej_obj)
+            message_id = @exchange.publish(rej_obj, message_id_chain: metadata[:headers]['message_id_chain'])
             # TODO: Proper error message
             @logger.info(
               short_message: "Issues were found with formatting of a spreadsheet",
