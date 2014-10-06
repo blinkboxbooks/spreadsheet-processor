@@ -9,12 +9,12 @@ GEM
       thread_safe (~> 0.1)
       tzinfo (~> 1.1)
     amq-protocol (1.9.2)
-    blinkbox-common_config (0.3.1)
+    blinkbox-common_config (0.4.0)
       java_properties
       ruby-units (~> 1.4)
-    blinkbox-common_logging (0.4.1)
+    blinkbox-common_logging (0.5.0)
       gelf
-    blinkbox-common_messaging (0.1.0)
+    blinkbox-common_messaging (0.2.0)
       activesupport
       bunny (~> 1.4)
       json-schema
@@ -39,7 +39,7 @@ GEM
     json (1.8.1)
     json-schema (2.2.5)
     mini_portile (0.6.0)
-    minitest (5.4.1)
+    minitest (5.4.2)
     multi_json (1.10.1)
     multi_test (0.1.1)
     nokogiri (1.6.3.1)
@@ -55,14 +55,14 @@ GEM
       rspec-core (~> 3.1.0)
       rspec-expectations (~> 3.1.0)
       rspec-mocks (~> 3.1.0)
-    rspec-core (3.1.4)
+    rspec-core (3.1.5)
       rspec-support (~> 3.1.0)
-    rspec-expectations (3.1.1)
+    rspec-expectations (3.1.2)
       diff-lcs (>= 1.2.0, < 2.0)
       rspec-support (~> 3.1.0)
-    rspec-mocks (3.1.1)
+    rspec-mocks (3.1.2)
       rspec-support (~> 3.1.0)
-    rspec-support (3.1.0)
+    rspec-support (3.1.1)
     ruby-ole (1.2.11.7)
     ruby-units (1.4.5)
     rubyzip (1.1.6)
@@ -80,9 +80,9 @@ PLATFORMS
   ruby
 
 DEPENDENCIES
-  blinkbox-common_config (~> 0.2)
-  blinkbox-common_logging (~> 0.4)
-  blinkbox-common_messaging
+  blinkbox-common_config (~> 0.4)
+  blinkbox-common_logging (~> 0.5)
+  blinkbox-common_messaging (~> 0.2)
   cucumber
   rake
   roo
