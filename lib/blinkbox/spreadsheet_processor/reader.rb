@@ -84,7 +84,7 @@ module Blinkbox
           if val.empty?
             data = {}
           else
-            data  ={ "subtitle" => val }
+            data = { "subtitle" => val }
           end
           {
             data: data

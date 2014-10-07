@@ -89,7 +89,7 @@ context Blinkbox::SpreadsheetProcessor::Reader do
         "Contributor #{number} Inverted" => nil,
         "Contributor #{number} Role" => nil,
         "Contributor #{number} Bio" => nil,
-        "Contributor #{number} Photo URL" => nil,
+        "Contributor #{number} Photo URL" => nil
       }
     end
 
@@ -204,7 +204,7 @@ context Blinkbox::SpreadsheetProcessor::Reader do
 
       it "must return an ISO 8601 timestamp with time component if Roo gives a Time object" do
         time = Time.new(2014, 9, 11, 13, 10, 53)
-        row = valid_row(with: { 'Publication Date' =>  time})
+        row = valid_row(with: { 'Publication Date' =>  time })
 
         book, issues = reader.send(:validate_spreadsheet_row_hash, row, 0)
         expect(issues.size).to eq(0)
@@ -477,7 +477,7 @@ context Blinkbox::SpreadsheetProcessor::Reader do
 
       ["four hundred", 341.12].each do |count|
         it "must reject a row with non-integer page counts: #{count.inspect}" do
-          row = valid_row(with: { 'Page Count' => count})
+          row = valid_row(with: { 'Page Count' => count })
 
           book, issues = reader.send(:validate_spreadsheet_row_hash, row, 0)
           expect(issues.map { |i| i[:error_code] }).to include("page_count.invalid")

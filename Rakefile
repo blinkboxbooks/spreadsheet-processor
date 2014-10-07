@@ -15,7 +15,7 @@ begin
   RSpec::Core::RakeTask.new(:spec) do |t|
     t.pattern = 'spec/**/*_spec.rb'
   end
-rescue LoadError => e
+rescue LoadError
   task :spec do
     $stderr.puts "Please install rspec: `gem install rspec`"
   end
@@ -24,7 +24,7 @@ end
 desc "Test all features"
 begin
   require 'cucumber'
-   require 'cucumber/rake/task'
+  require 'cucumber/rake/task'
   Cucumber::Rake::Task.new(:features) do |t|
   end
 rescue LoadError

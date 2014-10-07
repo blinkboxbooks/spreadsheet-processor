@@ -43,7 +43,7 @@ module Blinkbox
         end
 
         @queue = CommonMessaging::Queue.new(
-          "#{SERVICE_NAME.tr('/','.')}.pending_assets",
+          "#{SERVICE_NAME.tr('/', '.')}.pending_assets",
           exchange: "Marvin",
           bindings: bindings
         )

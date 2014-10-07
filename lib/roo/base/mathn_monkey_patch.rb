@@ -3,7 +3,7 @@
 module Roo
   class Base
     def self.number_to_letter(n)
-      letters=""
+      letters = ""
       if n > 26
         while n % 26 == 0 && n != 0
           letters << 'Z'
