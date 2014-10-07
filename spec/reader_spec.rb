@@ -203,7 +203,7 @@ context Blinkbox::SpreadsheetProcessor::Reader do
       end
 
       it "must return an ISO 8601 timestamp with time component if Roo gives a Time object" do
-        time = Time.new(2014, 9, 11, 13, 10, 53)
+        time = Time.utc(2014, 9, 11, 13, 10, 53)
         row = valid_row(with: { 'Publication Date' =>  time })
 
         book, issues = reader.send(:validate_spreadsheet_row_hash, row, 0)

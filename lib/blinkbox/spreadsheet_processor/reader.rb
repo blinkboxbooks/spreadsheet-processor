@@ -391,7 +391,7 @@ module Blinkbox
 
         CELL_VALIDATION.each do |field_name, validator|
           validation_result = instance_exec(row[field_name], &validator)
-          if field_name =~ /^Contributor (\d)$/ && validation_result[:data] != {}
+          if (field_name =~ /^Contributor (\d)$/) && (validation_result[:data] != {})
             contributor_columns_used.push(Regexp.last_match[1].to_i)
           end
 
