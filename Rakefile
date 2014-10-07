@@ -16,7 +16,6 @@ begin
     t.pattern = 'spec/**/*_spec.rb'
   end
 rescue LoadError => e
-  raise e
   task :spec do
     $stderr.puts "Please install rspec: `gem install rspec`"
   end

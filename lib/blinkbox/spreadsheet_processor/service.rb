@@ -1,13 +1,15 @@
 require "blinkbox/spreadsheet_processor/version"
 require "blinkbox/common_messaging"
 require "blinkbox/common_logging"
-require "blinkbox/mappings"
+require "blinkbox/common_mapping"
+require "blinkbox/tictoc"
 require "blinkbox/spreadsheet_processor/reader"
 
 module Blinkbox
   module SpreadsheetProcessor
     class Service
       attr_reader :logger
+      include Blinkbox::CommonHelpers::TicToc
 
       def initialize(options)
         tic
@@ -52,7 +54,7 @@ module Blinkbox
           facility_version: VERSION
         )
 
-        @mapper = Mappings.new(
+        @mapper = CommonMapping.new(
           options[:'mapper.url'],
           service_name: @service_name
         )
@@ -100,8 +102,7 @@ module Blinkbox
 
       def process_spreadsheet(metadata, obj)
         tic :spreadsheet
-        downloaded_file_io = @mapper.open(obj['source']['uri'])
-        begin
+        @mapper.open(obj['source']['uri']) do |downloaded_file_io|
           source = obj['source'].merge(
             'system' => {
               'name' => @service_name,
@@ -163,9 +164,6 @@ module Blinkbox
             event: :spreadsheet_finished,
             duration: toc(:spreadsheet)
           )
-        ensure
-          downloaded_file_io.close
-          downloaded_file_io.unlink if downloaded_file_io.respond_to? :unlink
         end
       end
     end
