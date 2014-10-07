@@ -180,14 +180,14 @@ context Blinkbox::SpreadsheetProcessor::Reader do
     end
 
     describe "for dates" do
-      ["2014-09-11", "20140911", Date.new(2014, 9, 11), Time.new(2014, 9, 11), 20140911.0].each do |date|
+      ["2014-09-11", "2014/09/11", "20140911", Date.new(2014, 9, 11), 20140911.0].each do |date|
         it "must accept publication dates: (#{date.class}) #{date}" do
           row = valid_row(with: { 'Publication Date' => date })
 
           book, issues = reader.send(:validate_spreadsheet_row_hash, row, 0)
           expect(issues.size).to eq(0)
           expect(book["dates"]).to be_a(Hash)
-          expect(book["dates"]["publish"]).to eq(Time.new(2014, 9, 11).utc.iso8601)
+          expect(book["dates"]["publish"]).to eq(Time.utc(2014, 9, 11).iso8601)
         end
       end
 
@@ -198,9 +198,20 @@ context Blinkbox::SpreadsheetProcessor::Reader do
           book, issues = reader.send(:validate_spreadsheet_row_hash, row, 0)
           expect(issues.size).to eq(0)
           expect(book["dates"]).to be_a(Hash)
-          expect(book["dates"]["publish"]).to eq(Time.new(2014, 9, 11).utc.iso8601)
+          expect(book["dates"]["publish"]).to eq(Time.utc(2014, 9, 11).iso8601)
         end
       end
+
+      it "must return an ISO 8601 timestamp with time component if Roo gives a Time object" do
+        time = Time.new(2014, 9, 11, 13, 10, 53)
+        row = valid_row(with: { 'Publication Date' =>  time})
+
+        book, issues = reader.send(:validate_spreadsheet_row_hash, row, 0)
+        expect(issues.size).to eq(0)
+        expect(book["dates"]).to be_a(Hash)
+        expect(book["dates"]["publish"]).to eq(time.iso8601)
+      end
+
 
       [invalid_headings['Publication Date'], "01-30-2014", 1410431742].each do |date|
         it "must reject a row with invalid publication date: (#{date.class}) #{date}" do

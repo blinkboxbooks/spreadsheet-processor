@@ -10,13 +10,13 @@ module Blinkbox
     class Service
       attr_reader :logger
       include Blinkbox::CommonHelpers::TicToc
+      SERVICE_NAME = "Marvin/spreadsheet_processor"
 
       def initialize(options)
+        raise "logging.gelf.facility is not #{SERVICE_NAME}." unless SERVICE_NAME == options[:'logging.gelf.facility']
         tic
         @logger = CommonLogging.from_config(options.tree(:logging))
         @logger.facility_version = VERSION
-        @service_name = "Marvin/spreadsheet_processor"
-        raise "logging.gelf.facility is not #{@service_name}." unless @service_name == options[:'logging.gelf.facility']
 
         CommonMessaging.configure!(options.tree(:rabbitmq), @logger)
 
@@ -43,20 +43,20 @@ module Blinkbox
         end
 
         @queue = CommonMessaging::Queue.new(
-          "#{@service_name.tr('/','.')}.pending_assets",
+          "#{SERVICE_NAME.tr('/','.')}.pending_assets",
           exchange: "Marvin",
           bindings: bindings
         )
 
         @exchange = CommonMessaging::Exchange.new(
           "Marvin",
-          facility: @service_name,
+          facility: SERVICE_NAME,
           facility_version: VERSION
         )
 
         @mapper = CommonMapping.new(
           options[:'mapper.url'],
-          service_name: @service_name
+          service_name: SERVICE_NAME
         )
         @logger.info(
           short_message: "Spreadsheet Processor v#{VERSION} initialized",
@@ -90,7 +90,7 @@ module Blinkbox
 
       def stop
         tic
-        # What needs to be done here? I need to look into rabbit.
+        # TODO: What needs to be done here? I need to look into rabbit.
         @logger.info(
           short_message: "Spreadsheet Processor v#{VERSION} shut down",
           event: :service_stopped,
@@ -105,7 +105,7 @@ module Blinkbox
         @mapper.open(obj['source']['uri']) do |downloaded_file_io|
           source = obj['source'].merge(
             'system' => {
-              'name' => @service_name,
+              'name' => SERVICE_NAME,
               'version' => VERSION
             }
           )
@@ -128,7 +128,7 @@ module Blinkbox
             book_obj = CommonMessaging::IngestionBookMetadataV2.new(book)
 
             # TODO: Add extra bits to common messaging that type:remote uris trigger the correct header
-            message_id = @exchange.publish(book_obj, message_id_chain: metadata[:headers]['message_id_chain'])
+            message_id = @exchange.publish(book_obj, message_id_chain: metadata[:headers]['message_id_chain'] || [])
             @logger.info(
               short_message: "Details for book #{book['isbn']} have been published",
               event: :book_details_found,
@@ -147,7 +147,7 @@ module Blinkbox
               source: source
             )
 
-            message_id = @exchange.publish(rej_obj, message_id_chain: metadata[:headers]['message_id_chain'])
+            message_id = @exchange.publish(rej_obj, message_id_chain: metadata[:headers]['message_id_chain'] || [])
             # TODO: Proper error message
             @logger.info(
               short_message: "Issues were found with formatting of a spreadsheet",

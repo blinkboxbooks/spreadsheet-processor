@@ -1,6 +1,5 @@
 $: << 'lib'
 require "blinkbox/common_messaging"
-require "blinkbox/tictoc"
 
 RSpec.configure do |config|
   config.before :all do

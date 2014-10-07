@@ -7,7 +7,39 @@ module Blinkbox
     class Reader
       attr_reader :valid_html
 
-      REQUIRED_HEADINGS = ["eISBN 13", "Title", "Subtitle", "Contributor 1", "Contributor 1 Inverted", "Contributor 1 Role", "Contributor 1 Bio", "Contributor 1 Photo URL", "Contributor 2", "Contributor 2 Inverted", "Contributor 2 Role", "Contributor 2 Bio", "Contributor 2 Photo URL", "Contributor 3", "Contributor 3 Inverted", "Contributor 3 Role", "Contributor 3 Bio", "Contributor 3 Photo URL", "Publication Date", "List Price ex VAT", "List Price inc VAT", "Currency Type", "Page Count", "Imprint", "Publisher", "Language", "BISAC Main Subject", "Additional BISAC Subjects (comma separated)", "Territories", "Description"]
+      REQUIRED_HEADINGS = [
+        "eISBN 13",
+        "Title",
+        "Subtitle",
+        "Contributor 1",
+        "Contributor 1 Inverted",
+        "Contributor 1 Role",
+        "Contributor 1 Bio",
+        "Contributor 1 Photo URL",
+        "Contributor 2",
+        "Contributor 2 Inverted",
+        "Contributor 2 Role",
+        "Contributor 2 Bio",
+        "Contributor 2 Photo URL",
+        "Contributor 3",
+        "Contributor 3 Inverted",
+        "Contributor 3 Role",
+        "Contributor 3 Bio",
+        "Contributor 3 Photo URL",
+        "Publication Date",
+        "List Price ex VAT",
+        "List Price inc VAT",
+        "Currency Type",
+        "Page Count",
+        "Imprint",
+        "Publisher",
+        "Language",
+        "BISAC Main Subject",
+        "Additional BISAC Subjects (comma separated)",
+        "Territories",
+        "Description"
+      ]
+
       CONTRIBUTOR_ROLES = {
         'author'       => 'A01',
         'illustrator'  => 'A12',
@@ -35,7 +67,7 @@ module Blinkbox
           end
         },
         "Title" => proc { |field|
-          val = field.to_s
+          val = field.to_s.strip
           if val.empty?
             {
               error_code: "title.invalid",
@@ -48,11 +80,11 @@ module Blinkbox
           end
         },
         "Subtitle" => proc { |field|
-          val = field.to_s
+          val = field.to_s.strip
           if val.empty?
             data = {}
           else
-            data  ={ "subtitle" => val}
+            data  ={ "subtitle" => val }
           end
           {
             data: data
@@ -74,6 +106,7 @@ module Blinkbox
             first = parts.shift
             data["Inverted"] = [parts.join(" "), first].join(", ")
           end
+
           contributor = {
             "names" => {
               "display" => data["Name"],
@@ -124,11 +157,12 @@ module Blinkbox
         "Contributor 2" => contributor.dup,
         "Contributor 3" => contributor.dup,
         "Publication Date" => proc { |field|
-          if !field.respond_to?(:utc)
+          field = Time.utc(field.year, field.month, field.day) if field.is_a?(Date)
+          if !field.respond_to?(:iso8601)
             begin
               raise unless field.to_s =~ /^(?:(?<year>(?:16|17|18|19|20)\d\d)[-\/]?(?<month>[01]?\d)[-\/]?(?<day>[0-3]?\d)(?:\.0)?|(?<day>[0-3]?\d)[-\/]?(?<month>[01]?\d)[-\/]?(?<year>(?:16|17|18|19|20)\d\d))$/
               parts = Regexp.last_match
-              field = Time.new(parts[:year].to_i, parts[:month].to_i, parts[:day].to_i)
+              field = Time.utc(parts[:year].to_i, parts[:month].to_i, parts[:day].to_i)
             rescue
               next {
                 error_code: "publish_date.invalid",
@@ -139,7 +173,7 @@ module Blinkbox
           {
             data: {
               "dates" => {
-                "publish" => field.utc.iso8601
+                "publish" => field.iso8601
               }
             }
           }
@@ -227,7 +261,7 @@ module Blinkbox
             data: {
               subjects: [{
                 "type" => "BISAC",
-                "code" => field
+                "code" => field.upcase
               }]
             }
           }
@@ -243,7 +277,7 @@ module Blinkbox
               subjects: codes.map { |code|
                 {
                   "type" => "BISAC",
-                  "code" => code
+                  "code" => code.upcase
                 }
               }
             }
@@ -253,7 +287,7 @@ module Blinkbox
           next {
             error_code: "description.invalid",
             message: "A description must be given for the book."
-          } if field.to_s.empty?
+          } if field.to_s.strip.empty?
 
           {
             data: {
@@ -262,7 +296,7 @@ module Blinkbox
                   "realm" => "onix:33",
                   "id" => "01"
                 }],
-                "content" => Sanitize.clean(field.to_s, @valid_html)
+                "content" => Sanitize.clean(field.to_s.strip, @valid_html)
               }]
             }
           }
@@ -304,7 +338,7 @@ module Blinkbox
         failures = []
         @headings = @roo.row(1)
 
-        if @headings & REQUIRED_HEADINGS != REQUIRED_HEADINGS
+        if (@headings & REQUIRED_HEADINGS) != REQUIRED_HEADINGS
           backtrace = caller
           data = {
             missing_headers: REQUIRED_HEADINGS - @headings,
@@ -357,7 +391,9 @@ module Blinkbox
 
         CELL_VALIDATION.each do |field_name, validator|
           validation_result = instance_exec(row[field_name], &validator)
-          contributor_columns_used.push(Regexp.last_match[1].to_i) if field_name =~ /^Contributor (\d)$/ && validation_result[:data] != {}
+          if field_name =~ /^Contributor (\d)$/ && validation_result[:data] != {}
+            contributor_columns_used.push(Regexp.last_match[1].to_i)
+          end
 
           if !validation_result[:error_code]
             data = validation_result[:data]

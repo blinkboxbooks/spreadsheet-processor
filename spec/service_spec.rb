@@ -23,7 +23,8 @@ context Blinkbox::SpreadsheetProcessor::Service do
     end
 
     it "must not start if logging options are missing" do
-      opts = double(@options)
+      opts = double
+      allow(opts).to receive(:[]).with(:'logging.gelf.facility').and_return("Marvin/spreadsheet_processor")
       allow(opts).to receive(:tree).with(:logging).and_return({})
       expect {
         described_class.new(opts)
@@ -98,7 +99,7 @@ context Blinkbox::SpreadsheetProcessor::Service do
         }
       )
       @service.send(:process_spreadsheet, metadata, obj)
-      expect(@exchange).to have_received(:publish).with(kind_of(Blinkbox::CommonMessaging::IngestionBookMetadataV2))
+      expect(@exchange).to have_received(:publish).with(kind_of(Blinkbox::CommonMessaging::IngestionBookMetadataV2), message_id_chain: kind_of(Array))
       expect(@logger).to have_received(:info)
     end
 
@@ -119,7 +120,7 @@ context Blinkbox::SpreadsheetProcessor::Service do
         }
       )
       @service.send(:process_spreadsheet, metadata, obj)
-      expect(@exchange).to have_received(:publish).with(kind_of(Blinkbox::CommonMessaging::IngestionFileRejectedV2))
+      expect(@exchange).to have_received(:publish).with(kind_of(Blinkbox::CommonMessaging::IngestionFileRejectedV2), message_id_chain: kind_of(Array))
       expect(@logger).to have_received(:info)
     end
   end
